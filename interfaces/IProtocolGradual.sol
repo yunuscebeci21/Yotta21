@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-interface IGradualTaum {
+interface IProtocolGradual {
     /*=============== Events ========================*/
     // The transfer event to vault
     event TransferToVault(
@@ -15,10 +15,6 @@ interface IGradualTaum {
         address indexed _to,
         uint256 _amount
     );
-    // Vault set event
-    event VaultSetted(address _ethVaultAddress);
-    // current percent event
-    event CurrentPercent(uint256 _currentPercent);
-    event EthPoolSetted(address _ethPoolAddress);
+
 
 }

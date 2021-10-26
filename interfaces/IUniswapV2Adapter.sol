@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.7;
+pragma solidity ^0.8.0;
 
 interface IUniswapV2Adapter{
-    event IndexPoolSetted(address _indexLiquidityPoolAddress);
-    event GradualSetted(address _gradualAddress);
-    event EthVaultSetted(address _ethVault);
-    
-    function approveTokens() external;
-    function addLiquidity() external returns(bool state);
-    function removeLiquidity(uint256 _percent) external returns (bool state);
-    function bringIndexesFromPool() external returns (bool state);
+
+    function addLiquidity() external returns(bool _state);
+    function removeLiquidity(uint256 _percent) external returns (bool _state);
+    function bringTTFsFromPool() external returns (bool _state);
 
 }

@@ -1,88 +1,105 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.7;
+pragma solidity ^0.8.0;
 
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-import {IReward} from "./interfaces/IReward.sol";
+import {IDividend} from "./interfaces/IDividend.sol";
 import {IPrice} from "./interfaces/IPrice.sol";
-import {IOttaToken} from "./interfaces/IOttaToken.sol";
 
 import {ISetToken} from "@setprotocol/set-protocol-v2/contracts/interfaces/ISetToken.sol";
-import {IStreamingFeeModule} from "./tokenSet/IStreamingFeeModule.sol";
-import {IIndexLiquidityPool} from "./interfaces/IIndexLiquidityPool.sol";
 
-/// @title Otta Token
+/// @title Otta
 /// @author Yotta21
-contract OttaToken is Context, IERC20, IERC20Metadata, IOttaToken {
+contract Otta is Context, IERC20, IERC20Metadata {
+
     using SafeMath for uint256;
 
-    /*================== Variables ===================*/
+    /* ================ Events ================== */
+
+    event ManagerSetted(address _manager);
+    event PriceSetted(address _priceAddress);
+    event DividendSetted(address _dividendAddress);
+    event IntervalSetted(uint256 _interval);
+    event DividendLockDaySetted(uint256 _dividendDay, uint256 _lockDay);
+    event OttaTokenPurchased(address indexed _resipient, uint256 _ottaAmount);
+
+    /* ================ State Variables ================== */
+
+    // address of owner
+    address public ownerAddress;
+    // address of manager
+    address public manager;
+    // address of dividend contract
+    address public dividendAddress;
+    // address of community Treasure contract
+    address private communityTreasureAddress;
     // token name for otta token
     string private _name;
     // token symbol for otta token
     string private _symbol;
     // token decimals for otta token
     uint8 private _decimals;
-    // day counter for reward lock time and unlock time
-    uint16 public rewardDayCounter;
+    // day counter for dividend lock time and unlock time
+    uint16 public dividendDayCounter;
     // total supply of tokens
     uint256 private _totalSupply;
     // total locked supply, set zero first
-    uint256 private lockedSupply;
+    uint256 public lockedSupply;
     // total unlocked supply, set zero first
     uint256 public unlockedSupply;
     // Chainlink keeper call time
-    uint256 private interval;
+    uint256 public interval;
     // Block Timestamp
-    uint256 private lastTimeStamp;
+    uint256 public lastTimeStamp;
+    // Dividend day
+    uint256 public dividendDay;
+    // Lock day
+    uint256 public lockDay;
+    // When the Dividend counter is 0
+    uint256 public dividendTime;
     // daily cumulative protocol fee
-    uint256 public protocolFeeBalance;
-    // max mint token
-    uint256 public constant TOTAL_SUPPLY = 44 * (10**24);
+    uint256 public communityTreasureFeeBalance;
+    // max mint token - total otta supply
+    uint256 public constant TOTAL_OTTA_AMOUNT = 55 * 10**24;
     // mint amount for ico
-    uint256 public constant ICO_SUPPLY = 19232 * (10**20);
-    // address of owner 
-    address public ownerAddress;
-    // address of manager
-    address public manager;
-    // address of reward contract 
-    address public rewardAddress;
-    IIndexLiquidityPool private indexPool;
-    // address of multisign wallet contract 
-    address private walletContractAddress;   
-    //price set status
-    bool public isPriceSetted = false;
+    uint256 public constant ICO_SUPPLY = 24040 * 10**20;
+    // otta contract set status
+    bool public isPriceSetted;
+    bool public isManagerSetted;
+    bool public isDividendSetted;
     // Allowance amounts on behalf of others
     mapping(address => mapping(address => uint256)) private _allowances;
     // Official record of token balances for each account
     mapping(address => uint256) private _balances;
-     // importing reward contract interface as reward
-    IReward private reward;
+    // importing dividend contract interface as dividend
+    IDividend public dividend;
     // importing price contract interface as price
-    IPrice private price;
-    // Accrue streaming fee from tokenSet
-    IStreamingFeeModule private streamingFee;
+    IPrice public price;
 
     /*================== Modifiers =====================*/
+
     /*
-     * Throws if the sender is not owner
+     * Throws if the sender is not owner or manager
      */
     modifier onlyOwner() {
-        require(msg.sender == ownerAddress || msg.sender == manager, "Only Owner");
+        require(
+            msg.sender == ownerAddress || msg.sender == manager,
+            "Only Owner or Manager"
+        );
         _;
     }
 
     /*=============== Constructor ========================*/
+
     constructor(
         address _manager,
         string memory name_,
         string memory symbol_,
         uint256 _interval,
-        address _rewardAddress,
-        address _streamingFeeModule
+        address _communityTreasureAddress
     ) {
         ownerAddress = msg.sender;
         require(_manager != address(0), "zero address");
@@ -91,75 +108,89 @@ contract OttaToken is Context, IERC20, IERC20Metadata, IOttaToken {
         _symbol = symbol_;
         _decimals = 18;
         interval = _interval;
-        require(_rewardAddress != address(0), "zero address");
-        rewardAddress = _rewardAddress;
-        reward = IReward(rewardAddress);
-        require(_streamingFeeModule != address(0),"zero address");
-        streamingFee = IStreamingFeeModule(_streamingFeeModule);
-        _mint(address(this), TOTAL_SUPPLY);
-        _transfer(address(this), ownerAddress, ICO_SUPPLY);
-        uint256 lockedAmount = _totalSupply.sub(ICO_SUPPLY);
-        lockedSupply = lockedAmount;
+        require(_communityTreasureAddress != address(0), "zero address");
+        communityTreasureAddress = _communityTreasureAddress;
+        _mint(address(this), TOTAL_OTTA_AMOUNT);
+        _transfer(address(this), ownerAddress, ICO_SUPPLY.mul(80).div(100));
+        _transfer(address(this), communityTreasureAddress, ICO_SUPPLY.mul(20).div(100));
+        lockedSupply = _totalSupply.sub(ICO_SUPPLY);
     }
 
+    /* ================ Functions ================== */
     /*================== Public Functions =====================*/
-     function setManager(address _manager) public onlyOwner returns(address){
+
+    /* Notice: Setting manager address
+     * Params:
+     * '_manager' The manager address.
+     */
+    function setManager(address _manager) public onlyOwner returns (address) {
+        require(!isManagerSetted, "Already setted");
         require(_manager != address(0), "zero address");
+        isManagerSetted = true;
         manager = _manager;
+        emit ManagerSetted(manager);
         return manager;
     }
 
-    /* Notice: Setting wallet contract address
-     * Params:
-     * '_walletContractAddress' The new wallet contract address.
-     * Return:
-     * 'walletContractAddress' The current wallet contract address.
-     * Requirements:
-     * '_walletContractAddress' cannot be the zero address.
-     */
-    function setWalletContract(address _walletContractAddress)
-        public
-        onlyOwner
-        returns (address newWalletContractAddress)
-    {
-        require(_walletContractAddress != address(0), "zero address");
-        walletContractAddress = _walletContractAddress;
-        emit WalletContractSetted(walletContractAddress);
-        return (walletContractAddress);
-    }
-
-    /* Notice: Setting price contract address methods
+    /* Notice: Setting price contract address 
      * Params:
      * '_priceAddress' The price contract address.
-     * Return:
-     * '_priceAddress' The current price contract address.
-     * Requirements:
-     * '_priceAddress' cannot be the zero address.
      */
     function setPrice(address _priceAddress)
         public
         onlyOwner
-        returns (address newPriceAddress)
+        returns (address)
     {
+        require(!isPriceSetted, "Already setted");
         require(_priceAddress != address(0), "zero address");
+        isPriceSetted = true;
         price = IPrice(_priceAddress);
+        emit PriceSetted(_priceAddress);
         return _priceAddress;
     }
-    /* Notice: Setting Index Liquidity Pool contract address methods
+
+    /* Notice: Setting dividend contract address
      * Params:
-     * '_indexPoolAddress' The Index Liquidity Pool contract address.
-     * Requirements:
-     * '_indexPoolAddress' cannot be the zero address.
+     * '_dividendAddress' The dividend contract address.
      */
-    function setIndexPool(address _indexPoolAddress) public onlyOwner{
-        require(_indexPoolAddress != address(0),"zero address");
-        indexPool = IIndexLiquidityPool(_indexPoolAddress);
+    function setDividend(address _dividendAddress)
+        public
+        onlyOwner
+        returns (address)
+    {
+        require(!isDividendSetted, "Already setted");
+        require(_dividendAddress != address(0), "zero address");
+        isDividendSetted = true;
+        dividendAddress = _dividendAddress;
+        dividend = IDividend(dividendAddress);
+        emit DividendSetted(dividendAddress);
+        return dividendAddress;
     }
 
-    function setInterval(uint256 _interval) public onlyOwner{
-        require(_interval != 0,"zero interval");
+    /* Notice: Setting keeper trigger time methods
+     * Params:
+     * '_interval' The new keeper trigger time.
+     */
+    function setInterval(uint256 _interval) public onlyOwner returns(uint256){
+        require(_interval != 0, "zero interval");
         interval = _interval;
+        emit IntervalSetted(interval);
+        return interval;
     }
+
+    /* Notice: Setting dividend and lock day
+     * Params:
+     * '_dividendDay' The new dividend day
+     * '_lockDay' The new lock day
+     */
+    function setDividendLockDay(uint256 _dividendDay, uint256 _lockDay) public onlyOwner returns(uint256, uint256){
+        require(_dividendDay != 0 && _lockDay !=0, "zero day");
+        dividendDay = _dividendDay;
+        lockDay = _lockDay;
+        emit DividendLockDaySetted(dividendDay, lockDay);
+        return (dividendDay, lockDay);
+    }
+
     /*
      *  Return: The name of the token.
      */
@@ -256,11 +287,7 @@ contract OttaToken is Context, IERC20, IERC20Metadata, IOttaToken {
             currentAllowance >= subtractedValue,
             "ERC20: decreased allowance below zero"
         );
-        _approve(
-            _msgSender(),
-            spender,
-            currentAllowance.sub(subtractedValue)
-        );
+        _approve(_msgSender(), spender, currentAllowance.sub(subtractedValue));
         return true;
     }
 
@@ -296,31 +323,32 @@ contract OttaToken is Context, IERC20, IERC20Metadata, IOttaToken {
         return true;
     }
 
+    /*================== External Functions =====================*/
+
     /*
-     * Notice: The function to be triggered when the otta token will take
+     * Notice: The function to be triggered when the otta token will buy
      * The amount of ethereum sent is calculated based on the otta price.
      * Otta token is transferred to the caller and the protocol.
      */
-   function buyTokens() public payable {
+    receive() external payable {
         uint256 _ethAmount = msg.value;
         require(msg.sender != address(0), "zero address");
-        address _userAddress = msg.sender;
         require(_ethAmount != 0, "insufficient eth amount");
+        address _userAddress = msg.sender;
         uint256 _ottaPrice = price.getOttaPrice();
         uint256 _tokens = (_ethAmount.mul(10**18)).div(_ottaPrice);
-        uint256 _userAllowance = 0 * 10 ** 18;
-        if(_tokens >= (1000 * 10 ** 18)){ 
-         _userAllowance = _ethAmount.mul(2).div(100);
-          payable(_userAddress).transfer(_userAllowance);
+        uint256 _userAllowance = 0;
+        if (_tokens >= (1000 * 10**18)) {
+            _userAllowance = _ethAmount.mul(2).div(100);
+            payable(_userAddress).transfer(_userAllowance);
         }
-        uint256 _protocolFee = _tokens.mul(25).div(100);
-        payable(rewardAddress).transfer(_ethAmount.sub(_userAllowance));
+        uint256 _communityTreasureFee = _tokens.mul(25).div(100);
+        payable(dividendAddress).transfer(_ethAmount.sub(_userAllowance));
         _transferFromContract(msg.sender, _tokens);
-        _transferProtocolFee(_protocolFee);
+        _transferTreasureFee(_communityTreasureFee);
         emit OttaTokenPurchased(msg.sender, _tokens);
     }
 
-    /*================== External Functions =====================*/
     /*
      * Notice: Checking the upkeepNeeded condition
      */
@@ -337,50 +365,46 @@ contract OttaToken is Context, IERC20, IERC20Metadata, IOttaToken {
      * Notice: Chainlink Keeper method calls unlocked method
      */
     function performUpkeep(bytes calldata performData) external {
+        require((block.timestamp - lastTimeStamp) > interval, "not epoch");
         lastTimeStamp = block.timestamp;
         unlocked();
-        collectStreamingFee();
         performData;
     }
 
-/*================== Internal Functions =====================*/
-    /* Notice: Triggers every 24 hours
-     * Unlocks 3600 tokens each time triggered
-     * Unlocked tokens are split into two: 'unlockedSupply' and 'protocolFeeBalance'
-     * Sale is made from 'unlockedSupply'
-     * Mint for protocol from 'protocolFeeBalance'
+    /*================== Internal Functions =====================*/
+    /* Notice: Triggers every interval time
+     * Unlocks  9000 tokens each time triggered
+     * Unlocked tokens are split into two: 'unlockedSupply' and 'communityTreasureFeeBalance'
+     * Buy is made from 'unlockedSupply'
+     * Mint for communityTreasure from 'communityTreasureFeeBalance'
      */
     function unlocked() internal {
         if (lockedSupply == 0) {
-            rewardDayCounter += 1;
-            if (rewardDayCounter == 24) {
-                reward.setEpoch(true);
+            dividendDayCounter += 1;
+            if (dividendDayCounter == dividendDay) {
+                dividend.setEpoch(true);
             }
-            if (rewardDayCounter == 48) {
-                reward.setEpoch(false);
-                rewardDayCounter = 0;
+            if (dividendDayCounter == lockDay + dividendDay) {
+                dividend.setEpoch(false);
+                dividendDayCounter = 0;
+                dividendTime = block.timestamp;
             }
         } else {
-            lockedSupply = lockedSupply.sub(7200 * 10 ** 18);
-            unlockedSupply = unlockedSupply.add(5760 * 10 ** 18);
-            protocolFeeBalance = protocolFeeBalance.add(1440 * 10 ** 18);
-            rewardDayCounter += 1;
-            if (rewardDayCounter == 24) {
-                reward.setEpoch(true);
+            lockedSupply = lockedSupply.sub(9000 * 10**18);
+            unlockedSupply = unlockedSupply.add(7200 * 10**18);
+            communityTreasureFeeBalance = communityTreasureFeeBalance.add(1800 * 10**18);
+            dividendDayCounter += 1;
+            if (dividendDayCounter == dividendDay) {
+                dividend.setEpoch(true);
             }
-            if (rewardDayCounter == 48) {
-                reward.setEpoch(false);
-                rewardDayCounter = 0;
+            if (dividendDayCounter == lockDay + dividendDay) {
+                dividend.setEpoch(false);
+                dividendDayCounter = 0;
+                dividendTime = block.timestamp;
             }
         }
     }
-    /*
-     * Notice: Collecting TTF streaming fee
-     */
-    function collectStreamingFee() internal{
-        ISetToken _ttf = ISetToken(indexPool.getIndex());
-        streamingFee.accrueFee(_ttf);
-    }
+
     /*
      * Notice: Sets `amount` as the allowance of `spender` over the `owner` s tokens.
      * Requirements:
@@ -497,8 +521,8 @@ contract OttaToken is Context, IERC20, IERC20Metadata, IOttaToken {
         uint256 amount
     ) internal virtual {}
 
-     /*
-     * Notice: Transfer function written for the protocol to transfer 
+    /*
+     * Notice: Transfer function written for the protocol to transfer
      * from "unlockedSupply" after selling otta tokens
      * 'sender' this contract
      * Requirements:
@@ -520,26 +544,22 @@ contract OttaToken is Context, IERC20, IERC20Metadata, IOttaToken {
     }
 
     /*
-     * Notice: Transfer function written for the protocol to transfer 
-     * from "protocolFeeBalance" after selling otta tokens
+     * Notice: Transfer function written for the communityTreasure to transfer
+     * from "communityTreasureFeeBalance" after buying otta tokens
      * 'sender' this contract
-     * 'recipient' wallet contract
+     * 'recipient' communityTreasure contract
      * Requirements:
      * 'recipient' cannot be the zero address.
      * `sender` must have a balance of at least `amount`.
      */
-    function _transferProtocolFee(uint256 amount) internal virtual {
-        _beforeTokenTransfer(address(this), walletContractAddress, amount);
-        uint256 senderBalance = protocolFeeBalance;
+    function _transferTreasureFee(uint256 amount) internal virtual {
+        _beforeTokenTransfer(address(this), communityTreasureAddress, amount);
+        uint256 senderBalance = communityTreasureFeeBalance;
         require(senderBalance >= amount, "Insufficient Protocol Fee Balance!");
-        protocolFeeBalance = protocolFeeBalance.sub(amount);
-        _balances[walletContractAddress] = 
-            _balances[walletContractAddress].add(
-            amount);
-        
-        emit Transfer(address(this), walletContractAddress, amount);
-        _afterTokenTransfer(address(this), walletContractAddress, amount);
-    }
+        communityTreasureFeeBalance = communityTreasureFeeBalance.sub(amount);
+        _balances[communityTreasureAddress] = _balances[communityTreasureAddress].add(amount);
 
-   
+        emit Transfer(address(this), communityTreasureAddress, amount);
+        _afterTokenTransfer(address(this), communityTreasureAddress, amount);
+    }
 }

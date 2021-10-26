@@ -1,25 +1,40 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.7;
+pragma solidity ^0.8.0;
 
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-//import {IPoolTokenAdapter} from "./interfaces/IPoolTokenAdapter.sol";
-import "./interfaces/ITaum.sol";
-import "./chainlink/KeeperCompatibleInterface.sol";
-import "./interfaces/IEthereumVault.sol";
-import "./interfaces/IPrice.sol";
 
-/// @title Taum Token
+import {ITaum} from "./interfaces/ITaum.sol";
+import {IProtocolVault} from "./interfaces/IProtocolVault.sol";
+import {IPrice} from "./interfaces/IPrice.sol";
+
+/// @title Taum
 /// @author Yotta21
 
 contract Taum is Context, IERC20, IERC20Metadata, ITaum {
     using SafeMath for uint256;
 
+    /*================== Events ===================*/
+
+    event ManagerSetted(address _manager);
+    event PriceSetted(address _priceAddress);
+    event ProtocolVaultSetted(address _protocolVaultAddress);
+    event EthPoolSetted(address _ethPoolAddress);
+
+
     /*================== State Variables ===================*/
 
+    // address of dividend contract
+    address public dividendAddress;
+    // Address of the Ethereum Pool  
+    address public ethPoolAddress;
+    // Address of contract creator
+    address public ownerAddress;
+    // address of manager
+    address public manager;
     // token name for taum token
     string private _name;
     // token symbol for taum token
@@ -29,33 +44,32 @@ contract Taum is Context, IERC20, IERC20Metadata, ITaum {
     // total supply
     uint256 private _totalSupply;
     // yearly percent of total supply
-    uint256 private constant YEARLY_VALUE = 10368 * 10**14;
+    uint256 public constant YEARLY_VALUE = 0.8766 * 10 ** 18;
     // Chainlink keeper call time
     uint256 public immutable interval;
     // Block Timestamp
     uint256 public lastTimeStamp;
-    // address of reward contract
-    address public rewardAddress;
-    // Address of the Ethereum Pool  
-    address private ethPoolAddress;
-    // Address of contract creator
-    address public ownerAddress;
-    // address of manager
-    address public manager;
+    // set status of taum 
+    bool public isManagerSetted;
+    bool public isPriceSetted;
+    bool public isProtocolVaultSetted;
+    bool public isEthPoolSetted;
     // Allowance amounts on behalf of others
     mapping(address => mapping(address => uint256)) private _allowances;
     // Official record of token balances for each account
     mapping(address => uint256) private _balances;
     // importing PriceV1 interface as priceV1
-    IPrice private price;
+    IPrice public price;
     // importing Ethereum vault interface as ethVault
-    IEthereumVault private ethVault;
-    // importing Pool Token Adapter contract interface as poolTokenAdapter
-    //IPoolTokenAdapter private poolTokenAdapter;
+    IProtocolVault public protocolVault;
 
-      /* ================ Modifier ================== */
+    /* ================ Modifier ================== */
+
+    /*
+     * Throws if the sender is not owner or manager
+     */
     modifier onlyOwner() {
-        require(msg.sender == ownerAddress || msg.sender == manager, "Only Owner");
+        require(msg.sender == ownerAddress || msg.sender == manager, "Only Owneror Manager");
         _;
     }
 
@@ -65,8 +79,7 @@ contract Taum is Context, IERC20, IERC20Metadata, ITaum {
         string memory name_,
         string memory symbol_,
         uint256 _interval,
-        address payable _rewardAddress,
-        address _priceAddress
+        address payable _dividendAddress
     ) {
         ownerAddress = msg.sender;
         require(_manager != address(0), "zero address");
@@ -74,24 +87,80 @@ contract Taum is Context, IERC20, IERC20Metadata, ITaum {
         _name = name_;
         _symbol = symbol_;
         _decimals = 18;
-        /*require(_poolTokenAdapter != address(0), "zero address");
-        poolTokenAdapterAddress = _poolTokenAdapter;
-        poolTokenAdapter = IPoolTokenAdapter(poolTokenAdapterAddress);*/
-        require(_rewardAddress != address(0), "zero address");
-        rewardAddress = _rewardAddress;
-        require(_priceAddress != address(0), "zero address");
-        price = IPrice(_priceAddress);
+        require(_dividendAddress != address(0), "zero address");
+        dividendAddress = _dividendAddress;
         interval = _interval;
         lastTimeStamp = block.timestamp;
         _mint(ownerAddress, (10000 * 10 ** 18));
     }
 
+    /*================== Functions =====================*/
     /*================== Public Functions =====================*/
+
+    /* Notice: Setting manager address 
+     * Params:
+     * '_manager' The price manager address.
+     */
     function setManager(address _manager) public onlyOwner returns(address){
+        require(!isManagerSetted, "Already setted");
         require(_manager != address(0), "zero address");
+        isManagerSetted = true;
         manager = _manager;
+        emit ManagerSetted(manager);
         return manager;
     }
+
+    /* Notice: Setting price contract address methods
+     * Params:
+     * '_priceAddress' The price contract address.
+     */
+    function setPrice(address _priceAddress)
+        public
+        onlyOwner
+        returns (address)
+    {
+        require(!isPriceSetted, "Already setted");
+        require(_priceAddress != address(0), "zero address");
+        isPriceSetted = true;
+        price = IPrice(_priceAddress);
+        emit PriceSetted(_priceAddress);
+        return (_priceAddress);
+    }
+    
+    /* Notice: Setting protocol vault contract address 
+     * Params:
+     * '_protocolVaultAddress' The protocol vault contract address.
+     */
+    function setProtocolVault(address _protocolVaultAddress)
+        public
+        onlyOwner
+        returns (address)
+    {
+        require(!isProtocolVaultSetted, "Already setted");
+        require(_protocolVaultAddress != address(0), "zero address");
+        isProtocolVaultSetted = true;
+        protocolVault = IProtocolVault(_protocolVaultAddress);
+        emit ProtocolVaultSetted(_protocolVaultAddress);
+        return (_protocolVaultAddress);
+    }
+
+    /* Notice: Setting ethereum pool contract address 
+     * Params:
+     * '_ethPoolAddress' The ethereum pool contract address.
+     */
+     function setEthPool(address _ethPoolAddress)
+        public
+        onlyOwner
+        returns (address)
+    {
+        require(!isEthPoolSetted, "Already setted");
+        require(_ethPoolAddress != address(0), "zero address");
+        isEthPoolSetted = true;
+        ethPoolAddress = _ethPoolAddress;
+        emit EthPoolSetted(ethPoolAddress);
+        return (ethPoolAddress);
+    }
+
     /*
      *  Return: The name of the token.
      */
@@ -228,60 +297,22 @@ contract Taum is Context, IERC20, IERC20Metadata, ITaum {
         return true;
     }
 
-    /* Notice: Setting price contract address methods
-     * Params:
-     * '_priceAddress' The price contract address.
-     * Return:
-     * '_priceAddress' The current price contract address.
-     * Requirements:
-     * '_priceAddress' cannot be the zero address.
-     */
-    function setPrice(address _priceAddress)
-        public
-        onlyOwner
-        returns (address _newPriceAddress)
-    {
-        require(_priceAddress != address(0), "zero address");
-        price = IPrice(_priceAddress);
-        return (_priceAddress);
-    }
-    
-     function setVault(address _vaultAddress)
-        public
-        onlyOwner
-        returns (address _newVaultAddress)
-    {
-        require(_vaultAddress != address(0), "zero address");
-        ethVault = IEthereumVault(_vaultAddress);
-        return (_vaultAddress);
-    }
-
-     function setEthPool(address _ethPoolAddress)
-        public
-        onlyOwner
-        returns (address _newEthPoolAddress)
-    {
-        require(_ethPoolAddress != address(0), "zero address");
-        ethPoolAddress = _ethPoolAddress;
-        return (_ethPoolAddress);
-    }
-
     /*================== External Functions =====================*/
     /*
      * Notice: function called when otta token sale is made to the system
      * Param: 'amount' quantity of taum token . It must be wei type (10**18)
      */
-    function receiver(uint256 amount) external override {  
+    function receiver(uint256 _taumAmount) external override {  
         address payable _userAddress = payable(msg.sender);
         uint256 accountBalance = _balances[msg.sender];
-        require(accountBalance >= amount, "ERC20: burn amount exceeds balance");
-        bool successTransfer = transfer(address(this), amount);
+        require(accountBalance >= _taumAmount, "ERC20: burn amount exceeds balance");
+        bool successTransfer = transfer(address(this), _taumAmount);
         require(successTransfer, "Transfer failed");
-        (,,uint256 _taumPrice) = price.getTaumPrice();
-        uint256 _ethAmount = amount.mul(_taumPrice).div(10**18);
-        bool statusInvestment = ethVault.withdraw(_userAddress, _ethAmount);
+        (,,uint256 _taumPrice) = price.getTaumPrice(0);
+        uint256 _ethAmount = _taumAmount.mul(_taumPrice).div(10**18);
+        bool statusInvestment = protocolVault.withdraw(_userAddress, _ethAmount);
         require(statusInvestment, "Insufficient Ether");
-        _burn(address(this), amount);
+        _burn(address(this), _taumAmount);
     }
 
     /*
@@ -308,6 +339,7 @@ contract Taum is Context, IERC20, IERC20Metadata, ITaum {
      * Notice: Chainlink Keeper method calls mintProtocol method
      */
     function performUpkeep(bytes calldata performData) external {
+        require((block.timestamp - lastTimeStamp) > interval, "not epoch");
         lastTimeStamp = block.timestamp;
         mintProtocolFee();
         performData;
@@ -315,13 +347,13 @@ contract Taum is Context, IERC20, IERC20Metadata, ITaum {
 
     /*================== Internal Functions =====================*/
     /*
-     *  Notice: calculate protocol fee and mint the reward contract
+     *  Notice: calculate protocol fee and mint the dividend contract
      */
     function mintProtocolFee() internal {
-        uint256 _protocolFee = (_totalSupply.mul(YEARLY_VALUE)).div(100).div(8766 * 10 ** 18);
-        (,,uint256 _taumPrice) = price.getTaumPrice();
+        uint256 _protocolFee = (_totalSupply.mul(YEARLY_VALUE)).div(100).div(365.25 * 10 ** 18);
+        (,,uint256 _taumPrice) = price.getTaumPrice(0);
         uint256 _feeQuantity = (_taumPrice.mul(_protocolFee)).div(10**18);
-        ethVault.withdraw(payable(rewardAddress), _feeQuantity);
+        protocolVault.withdraw(payable(dividendAddress), _feeQuantity);
     }
 
     /*
