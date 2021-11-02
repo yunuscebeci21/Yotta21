@@ -5,7 +5,7 @@ import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {IUniswapV2Adapter} from "./interfaces/IUniswapV2Adapter.sol";
 import {IWeth} from "./interfaces/IWeth.sol";
 import {IEthereumPoolTTFAdapter} from "./interfaces/IEthereumPoolTTFAdapter.sol";
-import {ISetToken} from "./tokenSet/ISetToken.sol";
+import {ISetToken} from "@setprotocol/set-protocol-v2/contracts/interfaces/ISetToken.sol";
 
 import {IEthereumPool} from "./interfaces/IEthereumPool.sol";
 import {IPrice} from "./interfaces/IPrice.sol";
