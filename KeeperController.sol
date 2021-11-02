@@ -55,6 +55,7 @@ contract KeeperController {
     // for other keeper
     uint96 public keeperRequirementPercentage;
     // set status of this contract 
+    //bool public isManagerSetted;
     bool public isKeeperIDsSetted;
     bool public isTradeFromUniswapV2Setted;
     bool public isProtocolVaultSetted;
@@ -122,7 +123,9 @@ contract KeeperController {
      * '_manager' The manager address
      */
     function setManager(address _manager) public onlyOwner returns(address){
+        //require(!isManagerSetted, "Already setted");
         require(_manager != address(0), "zero address");
+        //isManagerSetted = true;
         manager = _manager;
         emit ManagerSetted(manager);
         return manager;
@@ -146,8 +149,8 @@ contract KeeperController {
         uint256 _ttfPoolKeeperId,
         uint256 _selfKeeperId
     ) public onlyOwner returns(uint256,uint256,uint256,uint256,uint256,uint256){
-        require(!isKeeperIDsSetted, "Already setted");
-        isKeeperIDsSetted = true;
+        //require(!isKeeperIDsSetted, "Already setted");
+        //isKeeperIDsSetted = true;
         require(_taumFeeKeeperId != 0);
         taumFeeKeeperId = _taumFeeKeeperId;
         require(_ottaLockKeeperId != 0);
@@ -299,7 +302,7 @@ contract KeeperController {
      * Param:
      * '_wethQuantity' Quantity of ether to bring
      */
-    function bringEth(uint256 _wethQuantity) internal {
+    function bringEth(uint256 _wethQuantity) public {
         address payable _payableThis = payable(address(this));
         protocolVault.withdraw(_payableThis, _wethQuantity);
         weth.deposit{value: _wethQuantity}();
@@ -311,8 +314,8 @@ contract KeeperController {
      * '_linkQuantity' Quantity of link token to swap
      * '_wethQuantity' Quantity of wrapped ether to swap with link token 
      */
-    function buyLink(uint256 _linkQuantity, uint256 _wethQuantity) internal {
-        bringEth(_wethQuantity);
+    function buyLink(uint256 _linkQuantity, uint256 _wethQuantity) public {
+        this.bringEth(_wethQuantity);
         trade.buyComponents(linkToken, _linkQuantity, _wethQuantity);
         trade.residualWeth();
     }
@@ -323,7 +326,7 @@ contract KeeperController {
                Calculating and comparing requirements
     * Returns: minBalances, balances and requirements for all keepers
     */
-    function getVariables() internal
+    function getVariables() public
     {
 
         KeeperBalances memory _taumKeeper;
@@ -369,7 +372,7 @@ contract KeeperController {
                 executes from chainlink keeper
      * Params: minBalances, balances and requirements of all keepers for buy link token.
      */
-    function controller() internal {
+    function controller() public {
 
         getVariables();
         uint256 _linkPrice = price.getLinkPrice();
@@ -381,7 +384,7 @@ contract KeeperController {
         KeeperBalances memory _self = keeperBalancesMap[selfKeeperId];
 
         if (_taum.currentBalance < _taum.requirement) {
-            uint96 _linkQuantity = (_taum.minBalance * 2) - _taum.currentBalance;
+            uint96 _linkQuantity = (_taum.minBalance * (keeperRequirementPercentage/100)) - _taum.currentBalance;
             uint256 _linkToBuy = uint256(_linkQuantity);
             uint256 _preLinkToBuy = _linkToBuy.add(_linkToBuy.mul(10).div(100));
             uint256 _wethQuantity = (_preLinkToBuy).mul(_linkPrice).div(10**18);
@@ -389,7 +392,7 @@ contract KeeperController {
             keeper.addFunds(taumFeeKeeperId, _linkQuantity);
         }
         if (_gradual.currentBalance < _gradual.requirement) {
-            uint96 _linkQuantity = (_gradual.minBalance * 2) - _gradual.currentBalance;
+            uint96 _linkQuantity = (_gradual.minBalance * (keeperRequirementPercentage/100)) - _gradual.currentBalance;
             uint256 _linkToBuy = uint256(_linkQuantity);
             uint256 _preLinkToBuy = _linkToBuy.add(_linkToBuy.mul(10).div(100));
             uint256 _wethQuantity = (_preLinkToBuy).mul(_linkPrice).div(10**18);
@@ -397,7 +400,7 @@ contract KeeperController {
             keeper.addFunds(gradualKeeperId, _linkQuantity);
         }
         if (_ethPool.currentBalance < _ethPool.requirement) {
-            uint96 _linkQuantity = (_ethPool.minBalance * 2) - _ethPool.currentBalance;
+            uint96 _linkQuantity = (_ethPool.minBalance * (keeperRequirementPercentage/100)) - _ethPool.currentBalance;
             uint256 _linkToBuy = uint256(_linkQuantity);
             uint256 _preLinkToBuy = _linkToBuy.add(_linkToBuy.mul(10).div(100));
             uint256 _wethQuantity = (_preLinkToBuy).mul(_linkPrice).div(10**18);
@@ -405,7 +408,7 @@ contract KeeperController {
             keeper.addFunds(ethPoolKeeperId, _linkQuantity);
         }
         if (_ttfPool.currentBalance < _ttfPool.requirement) {
-            uint96 _linkQuantity = (_ttfPool.minBalance * 2) - _ttfPool.currentBalance;
+            uint96 _linkQuantity = (_ttfPool.minBalance * (keeperRequirementPercentage/100)) - _ttfPool.currentBalance;
             uint256 _linkToBuy = uint256(_linkQuantity);
             uint256 _preLinkToBuy = _linkToBuy.add(_linkToBuy.mul(10).div(100));
             uint256 _wethQuantity = (_preLinkToBuy).mul(_linkPrice).div(10**18);
@@ -413,7 +416,7 @@ contract KeeperController {
             keeper.addFunds(ttfPoolKeeperId, _linkQuantity);
         }
         if (_otta.currentBalance < _otta.requirement) {
-            uint96 _linkQuantity = (_otta.minBalance * 2) - _otta.currentBalance;
+            uint96 _linkQuantity = (_otta.minBalance * (keeperRequirementPercentage/100)) - _otta.currentBalance;
             uint256 _linkToBuy = uint256(_linkQuantity);
             uint256 _preLinkToBuy = _linkToBuy.add(_linkToBuy.mul(10).div(100));
             uint256 _wethQuantity = (_preLinkToBuy).mul(_linkPrice).div(10**18);
@@ -421,7 +424,7 @@ contract KeeperController {
             keeper.addFunds(ottaLockKeeperId, _linkQuantity);
         }
         if (_self.currentBalance< _self.requirement) {
-            uint96 _linkQuantity = (_self.minBalance * 2) - _self.currentBalance;
+            uint96 _linkQuantity = (_self.minBalance * (selfKeeperRequirementPercentage/100)) - _self.currentBalance;
             uint256 _linkToBuy = uint256(_linkQuantity);
             uint256 _preLinkToBuy = _linkToBuy.add(_linkToBuy.mul(10).div(100));
             uint256 _wethQuantity = (_preLinkToBuy).mul(_linkPrice).div(10**18);
