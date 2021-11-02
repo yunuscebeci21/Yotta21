@@ -119,6 +119,7 @@ contract EthereumPool is IEthereumPool {
         require(_protocolGradualAddress != address(0), "zero address");
         protocolGradualAddress = _protocolGradualAddress;
         ttfPercentageForAmount = 20;
+        protocolVaultPercentage = 25;
     }
 
     /*============ Public Functions ================ */
