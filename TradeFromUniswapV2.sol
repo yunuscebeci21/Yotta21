@@ -13,8 +13,7 @@ import {IBasicIssuanceModule} from "./tokenSet/IBasicIssuanceModule.sol";
 contract TradeFromUniswapV2 is ITradeComponents {
 
     /* ================= Events ================= */
-    
-    event ManagerSetted(address _manager);
+
     event ProtocolVaultSetted(address _protocolVault);
     event EthPoolSetted(address _ethPool);
     event PriceSetted(address _price);
@@ -51,7 +50,6 @@ contract TradeFromUniswapV2 is ITradeComponents {
     // maximum size of uint256
     uint256 public constant MAX_INT = 2**256 - 1;
     // set state of this contracts
-    bool public isManagerSetted;
     bool public isProtocolVaultSetted;
     bool public isEthPoolSetted;
     bool public isPriceSetted;
@@ -115,14 +113,12 @@ contract TradeFromUniswapV2 is ITradeComponents {
      * Param:
      * '_manager' address of ethereum vault
      */
-    function setManager(address _manager) public onlyOwner returns(address){
-        require(!isManagerSetted, "Already setted");
+    /*function setManager(address _manager) public onlyOwner returns(address){
         require(_manager != address(0), "zero address");
-        isManagerSetted = true;
         manager = _manager;
         emit ManagerSetted(manager);
         return manager;
-    }
+    }*/
 
     /*
      * Notice: Setting protocol vault address

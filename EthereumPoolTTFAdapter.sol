@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import {ISetToken} from "@setprotocol/set-protocol-v2/contracts/interfaces/ISetToken.sol";
 import {IBasicIssuanceModule} from "./tokenSet/IBasicIssuanceModule.sol";
-import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -18,7 +17,6 @@ contract EthereumPoolTTFAdapter is IEthereumPoolTTFAdapter {
 
     /* ================= Events ================= */
 
-    event ManagerSetted(address _manager);
     event TradeFromUniswapV2Setted(address _tradeFromUniswapV2Address);
     event TTFPoolSetted(address _ttfPoolAddress);
     event EthPoolSetted(address _ethPoolAddress);
@@ -42,7 +40,6 @@ contract EthereumPoolTTFAdapter is IEthereumPoolTTFAdapter {
     // maximum size of uint256
     uint256 public constant MAX_INT = 2**256 - 1;
     // set states of this contracts
-    bool public isManagerSetted;
     bool public isTradeFromUniswapV2;
     bool public isTtfPoolSetted;
     bool public isEthPoolSetted;
@@ -94,14 +91,12 @@ contract EthereumPoolTTFAdapter is IEthereumPoolTTFAdapter {
      * Param:
      * '_manager' address of manager
      */
-    function setManager(address _manager) public onlyOwner returns(address){
-        require(!isManagerSetted, "Already setted");
+    /*function setManager(address _manager) public onlyOwner returns(address){
         require(_manager != address(0), "zero address");
-        isManagerSetted = true;
         manager = _manager;
         emit ManagerSetted(manager);
         return manager;
-    }
+    }*/
     /*
      * Notice: Setting trade address
      * Param:

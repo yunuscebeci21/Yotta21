@@ -14,7 +14,6 @@ contract TTFPool is ITTFPool {
 
     /*================== Events ===================*/
 
-    event ManagerSetted(address _manager);
 
     /*================== State Variables ===================*/
 
@@ -32,8 +31,6 @@ contract TTFPool is ITTFPool {
     uint256 public immutable interval;
     // Chainlink keeper trigger last time
     uint256 public lastTimeStamp;
-    // set state of ttf pool contract
-    bool private isManagerSetted;
     // Accrue streaming fee from tokenSet
     IStreamingFeeModule private streamingFee;
 
@@ -77,14 +74,12 @@ contract TTFPool is ITTFPool {
      * Params:
      * '_manager' The manager address.
      */
-    function setManager(address _manager) public onlyOwner returns (address) {
-        require(!isManagerSetted, "Already setted");
+    /*function setManager(address _manager) public onlyOwner returns (address) {
         require(_manager != address(0), "zero address");
-        isManagerSetted = true;
         manager = _manager;
         emit ManagerSetted(manager);
         return manager;
-    }
+    }*/
 
     /* ================== External Functions ================== */
     /*

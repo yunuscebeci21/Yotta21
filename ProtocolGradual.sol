@@ -9,12 +9,11 @@ import {ITTFPool} from "./interfaces/ITTFPool.sol";
 import {IProtocolVault} from "./interfaces/IProtocolVault.sol";
 import {IUniswapV2Adapter} from "./interfaces/IUniswapV2Adapter.sol";
 import {ITradeComponents} from "./interfaces/ITradeComponents.sol";
-import {IProtocolGradual} from "./interfaces/IProtocolGradual.sol";
 import {IWeth} from "./interfaces/IWeth.sol";
 import {IPrice} from "./interfaces/IPrice.sol";
 import {IUniswapPool} from "./interfaces/IUniswapPool.sol";
 
-contract GradualTaum is IProtocolGradual {
+contract GradualTaum {
     using SafeMath for uint256;
 
     /*================== Events ===================*/
@@ -26,6 +25,18 @@ contract GradualTaum is IProtocolGradual {
     event ValuesSetted(uint256 _value1, uint256 _value2, uint256 _value3, uint256 _value4);
     event ProtocolVaultPercentageSetted(uint256 _protocolVaultPercentage);
     event RemovePercentageSetted(uint256 _removePercentage1, uint256 _removePercentage2);
+    // The transfer event to vault
+    event TransferToVault(
+        address indexed _from,
+        address indexed _to,
+        uint256 _amount
+    );
+    // The transfer event to eth pool
+    event TransferToETHPool(
+        address indexed _from,
+        address indexed _to,
+        uint256 _amount
+    );
 
     /*================== State Variables ===================*/
 
@@ -62,7 +73,6 @@ contract GradualTaum is IProtocolGradual {
     // percentage for processValue2ToValue3 fonction
     uint256 public removePercentage2;
     // set status of this contract
-    bool public isManagerSetted;
     bool public isEthPoolSetted;
     bool public isPriceSetted;
     bool public isTradeFromUniswapV2Setted;
@@ -125,9 +135,11 @@ contract GradualTaum is IProtocolGradual {
         require(_ttfUniPool != address(0), "zero address");
         ttfUniPool = _ttfUniPool;
         ttf = _ttf;
+        value1 = 0;
         value2 = 10 * 10 ** 18;
         value3 = 20 * 10 ** 18;
         value4 = 30 * 10 ** 18;
+        protocolVaultPercentage = 25*10**18;
         removePercentage1 = 25;
         removePercentage2 = 15;
     }
@@ -141,9 +153,7 @@ contract GradualTaum is IProtocolGradual {
      * '_manager' The manager address
      */
     function setManager(address _manager) public onlyOwner returns(address){
-        require(!isManagerSetted, "Already setted");
         require(_manager != address(0), "zero address");
-        isManagerSetted = true;
         manager = _manager;
         emit ManagerSetted(manager);
         return manager;
@@ -159,6 +169,7 @@ contract GradualTaum is IProtocolGradual {
         require(_ethPoolAddress != address(0), "zero address");
         isEthPoolSetted = true;
         ethPoolAddress = _ethPoolAddress;
+        ethPool = IEthereumPool(ethPoolAddress);
         emit EthPoolSetted(ethPoolAddress);
         return ethPoolAddress;
     }
@@ -223,6 +234,7 @@ contract GradualTaum is IProtocolGradual {
         onlyOwner
         returns (uint256)
     {
+        require(_protocolVaultPercentage != 0, "not zero percentage");
         protocolVaultPercentage = _protocolVaultPercentage;
         emit ProtocolVaultPercentageSetted(protocolVaultPercentage);
         return protocolVaultPercentage;
@@ -239,6 +251,7 @@ contract GradualTaum is IProtocolGradual {
         onlyOwner
         returns (uint256,uint256)
     {
+        require(_removePercentage1 != 0 && _removePercentage2 != 0, "not zero percentage");
         removePercentage1 = _removePercentage1;
         removePercentage2 = _removePercentage2;
         emit RemovePercentageSetted(removePercentage1, removePercentage2);

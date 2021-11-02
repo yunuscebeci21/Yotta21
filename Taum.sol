@@ -19,7 +19,6 @@ contract Taum is Context, IERC20, IERC20Metadata, ITaum {
 
     /*================== Events ===================*/
 
-    event ManagerSetted(address _manager);
     event PriceSetted(address _priceAddress);
     event ProtocolVaultSetted(address _protocolVaultAddress);
     event EthPoolSetted(address _ethPoolAddress);
@@ -50,7 +49,6 @@ contract Taum is Context, IERC20, IERC20Metadata, ITaum {
     // Block Timestamp
     uint256 public lastTimeStamp;
     // set status of taum 
-    bool public isManagerSetted;
     bool public isPriceSetted;
     bool public isProtocolVaultSetted;
     bool public isEthPoolSetted;
@@ -101,14 +99,12 @@ contract Taum is Context, IERC20, IERC20Metadata, ITaum {
      * Params:
      * '_manager' The price manager address.
      */
-    function setManager(address _manager) public onlyOwner returns(address){
-        require(!isManagerSetted, "Already setted");
+    /*function setManager(address _manager) public onlyOwner returns(address){
         require(_manager != address(0), "zero address");
-        isManagerSetted = true;
         manager = _manager;
         emit ManagerSetted(manager);
         return manager;
-    }
+    }*/
 
     /* Notice: Setting price contract address methods
      * Params:
@@ -302,7 +298,7 @@ contract Taum is Context, IERC20, IERC20Metadata, ITaum {
      * Notice: function called when otta token sale is made to the system
      * Param: 'amount' quantity of taum token . It must be wei type (10**18)
      */
-    function receiver(uint256 _taumAmount) external override {  
+    function receiver(uint256 _taumAmount) external {  
         address payable _userAddress = payable(msg.sender);
         uint256 accountBalance = _balances[msg.sender];
         require(accountBalance >= _taumAmount, "ERC20: burn amount exceeds balance");

@@ -15,7 +15,6 @@ contract UniswapV2Adapter is IUniswapV2Adapter {
 
     /*================== Events ===================*/
 
-    event ManagerSetted(address _manager);
     event TTFPoolSetted(address _ttfPoolAddress);
     event PriceSetted(address _priceAddress);
     event ProtocolVaultSetted(address _protocolVaultAddress);
@@ -49,7 +48,6 @@ contract UniswapV2Adapter is IUniswapV2Adapter {
     // ttf's pool address after it was added to univ2
     address public ttfUniV2Address;
     // set status of this contract
-    bool public isManagerSetted;
     bool public isTTFPoolSetted;
     bool public isPriceSetted;
     bool public isProtocolVaultSetted;
@@ -72,7 +70,7 @@ contract UniswapV2Adapter is IUniswapV2Adapter {
      * Throws if the sender is not owner or manager
      */
     modifier onlyOwner() {
-        require(msg.sender == owner || msg.sender == manager, "Only Owneror Manager");
+        require(msg.sender == owner || msg.sender == manager, "Only Owner or Manager");
         _;
     }
 
@@ -107,14 +105,12 @@ contract UniswapV2Adapter is IUniswapV2Adapter {
      * Params:
      * '_manager' The manager address.
      */
-    function setManager(address _manager) public onlyOwner returns (address) {
-        require(!isManagerSetted, "Already setted");
+    /*function setManager(address _manager) public onlyOwner returns (address) {
         require(_manager != address(0), "zero address");
-        isManagerSetted = true;
         manager = _manager;
         emit ManagerSetted(manager);
         return manager;
-    }
+    }*/
 
     /* Notice: Setting ttf pool address
      * Params:
@@ -307,54 +303,32 @@ contract UniswapV2Adapter is IUniswapV2Adapter {
         returns (bool)
     {
         require(msg.sender == protocolGradual, "Only gradualTaum");
-        ERC20 _ttf = ERC20(ttf);
+        ERC20 _ttf = ERC20(ttf); 
         uint256 _totalSupply = ttfUniV2.totalSupply();
-
-        uint256 _liquidity = ttfUniV2
-            .balanceOf(address(this))
-            .mul(_percent)
-            .div(100);
+        
+        uint256 _liquidity = ttfUniV2.balanceOf(address(this)).mul(_percent).div(100);
         uint256 _percentLiquidity = _liquidity.mul(10**18).div(_totalSupply);
         uint256 _reserveWeth;
         uint256 _reserveTtf;
-
+        
         address _token0 = ttfUniV2.token0();
         if (_token0 == wethAddress) {
-            (_reserveWeth, _reserveTtf, ) = ttfUniV2.getReserves();
-            uint256 _wethAmountMin = (
-                _percentLiquidity.mul(_reserveWeth).div(10**18)
-            ).sub((_percentLiquidity.mul(_reserveWeth).mul(5).div(10**19)));
-            uint256 _ttfAmountMin = (
-                _percentLiquidity.mul(_reserveTtf).div(10**18)
-            ).sub((_percentLiquidity.mul(_reserveTtf).mul(5).div(10**19)));
-
-            router02.removeLiquidity(
-                wethAddress,
-                ttf,
-                _liquidity,
-                _wethAmountMin,
-                _ttfAmountMin,
-                address(this),
-                block.timestamp + DEADLINE
-            );
-        } else {
-            (_reserveTtf, _reserveWeth, ) = ttfUniV2.getReserves();
-            uint256 _wethAmountMin = (
-                _percentLiquidity.mul(_reserveWeth).div(10**18)
-            ).sub((_percentLiquidity.mul(_reserveWeth).mul(5).div(10**19)));
-            uint256 _ttfAmountMin = (
-                _percentLiquidity.mul(_reserveTtf).div(10**18)
-            ).sub((_percentLiquidity.mul(_reserveTtf).mul(5).div(10**19)));
-
-            router02.removeLiquidity(
-                ttf,
-                wethAddress,
-                _liquidity,
-                _ttfAmountMin,
-                _wethAmountMin,
-                address(this),
-                block.timestamp + DEADLINE
-            );
+            (_reserveWeth,_reserveTtf,) = ttfUniV2.getReserves();
+        }else{
+            (_reserveTtf,_reserveWeth,) = ttfUniV2.getReserves();
+        }
+        
+        uint256 _wethAmountMin = (_percentLiquidity.mul(_reserveWeth).div(10**18)).sub(
+            (_percentLiquidity.mul(_reserveWeth).mul(5).div(10**19))
+        );
+        uint256 _ttfAmountMin = (_percentLiquidity.mul(_reserveTtf).div(10**18)).sub(
+            (_percentLiquidity.mul(_reserveTtf).mul(5).div(10**19))
+        );
+        
+        if (_token0 == wethAddress) {
+            router02.removeLiquidity(wethAddress, ttf, _liquidity, _wethAmountMin, _ttfAmountMin, address(this), block.timestamp + DEADLINE);
+        }else{
+            router02.removeLiquidity(ttf, wethAddress, _liquidity, _ttfAmountMin, _wethAmountMin, address(this), block.timestamp + DEADLINE);
         }
 
         weth.transfer(protocolVaultAddress, weth.balanceOf(address(this)));

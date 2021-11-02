@@ -64,7 +64,6 @@ contract Price is IPrice{
     // chainlink keeper id of this contract
     uint256 public selfKeeperId;
     // set status of this contract
-    bool public isManagerSetted;
     bool public isUniPoolsSetted;
     bool public isProtocolVaultSetted;
     bool public isTTFPoolSetted;
@@ -128,9 +127,7 @@ contract Price is IPrice{
      * '_manager' The manager address
      */
     function setManager(address _manager) public onlyOwner returns(address){
-        require(!isManagerSetted, "Already setted");
         require(_manager != address(0), "zero address");
-        isManagerSetted = true;
         manager = _manager;
         emit ManagerSetted(manager);
         return manager;

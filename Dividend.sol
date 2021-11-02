@@ -15,6 +15,7 @@ contract Dividend is IDividend {
     /* =================== Event ====================== */
 
     event ManagerSetted(address _manager);
+    event DividendRequestingAddressSetted(address _dividendRequestingAddress);
 
     /* =================== State Variables ====================== */
 
@@ -24,8 +25,10 @@ contract Dividend is IDividend {
     address public manager;
     // address of otta token
     address public ottaTokenAddress;
-    // address of communityTreasure
-    address public communityTreasureAddress;
+    // address of LockedOtta
+    address public lockedOtta;
+    // address of dividend Requesting address
+    address public dividendRequestingAddress;
     // total number of wallets locking otta tokens
     uint256 public walletCounter;
     // total locked otta token amount
@@ -38,7 +41,7 @@ contract Dividend is IDividend {
     bool public isLockingEpoch;
     bool public isOttaTokenSetted;
     bool public isTreasureSetted;
-    bool public isManagerSetted;
+    //bool public isManagerSetted;
     // holds relation of address and locked otta token amount
     mapping(address => uint256) private locked;
     // importing otta token methods
@@ -50,7 +53,7 @@ contract Dividend is IDividend {
      * Throws if the sender is not owner or manager
      */
     modifier onlyOwner() {
-        require(msg.sender == owner || msg.sender == manager, "Only Owneror Manager");
+        require(msg.sender == owner || msg.sender == manager, "Only Owner or Manager");
         _;
     }
 
@@ -59,7 +62,7 @@ contract Dividend is IDividend {
     constructor(
         address _manager,
         address _ottaTokenAddress,
-        address _communityTreasureAddress
+        address _lockedOtta
     ) {
         owner = msg.sender;
         require(_manager != address(0), "zero address");
@@ -68,8 +71,8 @@ contract Dividend is IDividend {
         require(_ottaTokenAddress != address(0), "zero address");
         ottaTokenAddress = _ottaTokenAddress;
         ottaToken = ERC20(ottaTokenAddress);
-        require(_communityTreasureAddress != address(0), "zero address");
-        communityTreasureAddress = _communityTreasureAddress;
+        require(_lockedOtta != address(0), "zero address");
+        lockedOtta = _lockedOtta;
     }
 
     /* =================== Functions ====================== */
@@ -80,11 +83,22 @@ contract Dividend is IDividend {
      * '_manager' address of ethereum vault
      */
     function setManager(address _manager) public onlyOwner returns (address) {
-        require(!isManagerSetted, "Already setted");
         require(_manager != address(0), "zero address");
-        isManagerSetted = true;
         manager = _manager;
         emit ManagerSetted(manager);
+        return manager;
+    }
+    
+    
+    /*
+     * Notice: Setting dividend owner address
+     * Param:
+     * '_dividendOwnerAddress' address of dividend owner
+     */
+    function setDividendRequestingAddress(address _dividendRequestingAddress) public onlyOwner returns (address) {
+        require(_dividendRequestingAddress != address(0), "zero address");
+        dividendRequestingAddress = _dividendRequestingAddress;
+        emit DividendRequestingAddressSetted(dividendRequestingAddress);
         return manager;
     }
 
@@ -119,8 +133,8 @@ contract Dividend is IDividend {
         if (isLockingEpoch) {
             totalEthDividend = address(this).balance;
 
-            uint256 _amount = ottaToken.balanceOf(communityTreasureAddress);
-            locked[owner] = locked[owner].add(_amount);
+            uint256 _amount = ottaToken.balanceOf(lockedOtta);
+            locked[owner] = _amount;
             uint256 _ottaAmount = ottaToken.balanceOf(address(this));
             totalLockedOtta = _ottaAmount.add(_amount);
             walletCounter += 1;
@@ -166,10 +180,8 @@ contract Dividend is IDividend {
             10**18
         );
         _userAddress.transfer(_dividendQuantity);
-        if (msg.sender != owner) {
-            bool success = ottaToken.transfer(msg.sender, _ottaQuantity);
-            require(success, "transfer failed");
-        }
+        bool success = ottaToken.transfer(msg.sender, _ottaQuantity);
+        require(success, "transfer failed");
     }
 
     /*
@@ -178,10 +190,9 @@ contract Dividend is IDividend {
      *         owner withdraw ether
      *         called when we lose the owner
      */
-    function getDividendOwner() external onlyOwner {
-        require(!isLockingEpoch, "Not Dividend Epoch");
-        require(locked[owner] != 0, "Locked Otta not found");
-        address payable _userAddress = payable(msg.sender);
+    function getDividendRequesting() external override {
+        require(msg.sender == ottaTokenAddress, "Only Otta");
+        address payable _userAddress = payable(dividendRequestingAddress);
         require(_userAddress != address(0), "zero address");
         uint256 _ottaQuantity = locked[owner];
         locked[owner] = 0;

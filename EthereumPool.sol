@@ -5,12 +5,11 @@ import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {IUniswapV2Adapter} from "./interfaces/IUniswapV2Adapter.sol";
 import {IWeth} from "./interfaces/IWeth.sol";
 import {IEthereumPoolTTFAdapter} from "./interfaces/IEthereumPoolTTFAdapter.sol";
-import {ISetToken} from "@setprotocol/set-protocol-v2/contracts/interfaces/ISetToken.sol";
+import {ISetToken} from "./tokenSet/ISetToken.sol";
 
 import {IEthereumPool} from "./interfaces/IEthereumPool.sol";
 import {IPrice} from "./interfaces/IPrice.sol";
 import {ITTFPool} from "./interfaces/ITTFPool.sol";
-import {IProtocolGradual} from "./interfaces/IProtocolGradual.sol";
 import {ITradeComponents} from "./interfaces/ITradeComponents.sol";
 import {ITaum} from "./interfaces/ITaum.sol";
 
@@ -27,6 +26,7 @@ contract EthereumPool is IEthereumPool {
     event MinValueSetted(uint256 _minValue);
     event LimitSetted(uint256 _limitValue);
     event TTFPercentageForAmountSetted(uint256 _ttfPercentage);
+    event ProtocolVaultPercentageSetted(uint256 _protocolVaultPercentage);
 
     /*================== State Variables ===================*/
     // Address of the contract creator
@@ -53,8 +53,9 @@ contract EthereumPool is IEthereumPool {
     uint256 public issueQuantity;
     // Determines how much ttf will be issue
     uint256 public ttfPercentageForAmount;
+    // protocol vault percentage
+    uint256 public protocolVaultPercentage;
     // Status of set in this contract
-    bool public isManagerSetted;
     bool public isPriceSetted;
     // importing Index Liquidity Pool methods
     ITTFPool public ttfPool;
@@ -64,8 +65,6 @@ contract EthereumPool is IEthereumPool {
     IEthereumPoolTTFAdapter public ethPoolTTFAdapter;
     // Importing Price Contract Methods
     IPrice public price;
-    // Importing Protocol Gradual Contract Methods
-    IProtocolGradual public protocolGradual;
     // Importing wrapped ether methods(Deposit-Withdraw and IERC20 methods)
     IWeth public weth;
     // Importing trade methods
@@ -119,7 +118,6 @@ contract EthereumPool is IEthereumPool {
         trade = ITradeComponents(tradeFromUniswapV2Address);
         require(_protocolGradualAddress != address(0), "zero address");
         protocolGradualAddress = _protocolGradualAddress;
-        protocolGradual = IProtocolGradual(protocolGradualAddress);
         ttfPercentageForAmount = 20;
     }
 
@@ -130,9 +128,7 @@ contract EthereumPool is IEthereumPool {
      * '_manager' address of ethereum vault
      */
     function setManager(address _manager) public onlyOwner returns (address) {
-        require(!isManagerSetted, "Already setted");
         require(_manager != address(0), "zero address");
-        isManagerSetted = true;
         manager = _manager;
         emit ManagerSetted(manager);
         return manager;
@@ -173,20 +169,34 @@ contract EthereumPool is IEthereumPool {
      * _limitValue' The limit value
      */
     function setLimit(uint256 _limitValue) public onlyOwner returns (uint256) {
+        require(_limitValue != 0, "not zero");
         limitValue = _limitValue;
         emit LimitSetted(limitValue);
         return (limitValue);
     }
 
     /*
-     * Notice: Setting value of limit
+     * Notice: Setting ttf Percentage for ttf amount
      * Param:
-     * _limitValue' The limit value
+     * _ttfPercentage' The ttf Percentage
      */
     function setTTFPercentage(uint256 _ttfPercentage) public onlyOwner returns (uint256) {
+        require(_ttfPercentage != 0, "not zero");
         ttfPercentageForAmount = _ttfPercentage;
         emit TTFPercentageForAmountSetted(ttfPercentageForAmount);
         return (ttfPercentageForAmount);
+    }
+
+    /*
+     * Notice: Setting 
+     * Param:
+     * _ttfPercentage' The limit value
+     */
+    function setProtocolVaultPercentage(uint256 _protocolVaultPercentage) public onlyOwner returns (uint256) {
+        require(_protocolVaultPercentage != 0, "not zero");
+        protocolVaultPercentage = _protocolVaultPercentage;
+        emit ProtocolVaultPercentageSetted(protocolVaultPercentage);
+        return (protocolVaultPercentage);
     }
 
 
@@ -285,7 +295,7 @@ contract EthereumPool is IEthereumPool {
         address _userAddress = msg.sender;
         uint256 _ethQuantity = msg.value;
         weth.deposit{value: _ethQuantity}();
-        uint256 _ethToVault = _ethQuantity.mul(25).div(100);
+        uint256 _ethToVault = _ethQuantity.mul(protocolVaultPercentage).div(100);
         limit = limit.add(_ethQuantity).sub(_ethToVault);
         bool _successTransfer = weth.transfer(protocolVault, _ethToVault);
         require(_successTransfer, "Transfer failed.");

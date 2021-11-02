@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {ISetToken} from "@setprotocol/set-protocol-v2/contracts/interfaces/ISetToken.sol";
+import {ISetToken} from "../tokenSet/ISetToken.sol";
 
 interface IEthereumPoolTTFAdapter {
     

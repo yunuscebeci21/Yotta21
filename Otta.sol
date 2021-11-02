@@ -9,7 +9,6 @@ import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {IDividend} from "./interfaces/IDividend.sol";
 import {IPrice} from "./interfaces/IPrice.sol";
 
-import {ISetToken} from "@setprotocol/set-protocol-v2/contracts/interfaces/ISetToken.sol";
 
 /// @title Otta
 /// @author Yotta21
@@ -34,8 +33,8 @@ contract Otta is Context, IERC20, IERC20Metadata {
     address public manager;
     // address of dividend contract
     address public dividendAddress;
-    // address of community Treasure contract
-    address private communityTreasureAddress;
+    // address of lockedOtta contract
+    address private lockedOtta;
     // token name for otta token
     string private _name;
     // token symbol for otta token
@@ -60,15 +59,14 @@ contract Otta is Context, IERC20, IERC20Metadata {
     uint256 public lockDay;
     // When the Dividend counter is 0
     uint256 public dividendTime;
-    // daily cumulative protocol fee
-    uint256 public communityTreasureFeeBalance;
+    // daily cumulative community treasure fee
+    uint256 public lockedOttaFeeBalance;
     // max mint token - total otta supply
     uint256 public constant TOTAL_OTTA_AMOUNT = 55 * 10**24;
     // mint amount for ico
     uint256 public constant ICO_SUPPLY = 24040 * 10**20;
     // otta contract set status
     bool public isPriceSetted;
-    bool public isManagerSetted;
     bool public isDividendSetted;
     // Allowance amounts on behalf of others
     mapping(address => mapping(address => uint256)) private _allowances;
@@ -99,7 +97,7 @@ contract Otta is Context, IERC20, IERC20Metadata {
         string memory name_,
         string memory symbol_,
         uint256 _interval,
-        address _communityTreasureAddress
+        address _lockedOtta
     ) {
         ownerAddress = msg.sender;
         require(_manager != address(0), "zero address");
@@ -108,11 +106,14 @@ contract Otta is Context, IERC20, IERC20Metadata {
         _symbol = symbol_;
         _decimals = 18;
         interval = _interval;
-        require(_communityTreasureAddress != address(0), "zero address");
-        communityTreasureAddress = _communityTreasureAddress;
+        lastTimeStamp = block.timestamp;
+        dividendDay = 28;
+        lockDay = 2;
+        require(_lockedOtta != address(0), "zero address");
+        lockedOtta = _lockedOtta;
         _mint(address(this), TOTAL_OTTA_AMOUNT);
         _transfer(address(this), ownerAddress, ICO_SUPPLY.mul(80).div(100));
-        _transfer(address(this), communityTreasureAddress, ICO_SUPPLY.mul(20).div(100));
+        _transfer(address(this), lockedOtta, ICO_SUPPLY.mul(20).div(100));
         lockedSupply = _totalSupply.sub(ICO_SUPPLY);
     }
 
@@ -124,9 +125,7 @@ contract Otta is Context, IERC20, IERC20Metadata {
      * '_manager' The manager address.
      */
     function setManager(address _manager) public onlyOwner returns (address) {
-        require(!isManagerSetted, "Already setted");
         require(_manager != address(0), "zero address");
-        isManagerSetted = true;
         manager = _manager;
         emit ManagerSetted(manager);
         return manager;
@@ -342,10 +341,10 @@ contract Otta is Context, IERC20, IERC20Metadata {
             _userAllowance = _ethAmount.mul(2).div(100);
             payable(_userAddress).transfer(_userAllowance);
         }
-        uint256 _communityTreasureFee = _tokens.mul(25).div(100);
+        uint256 _lockedOttaFee = _tokens.mul(25).div(100);
         payable(dividendAddress).transfer(_ethAmount.sub(_userAllowance));
         _transferFromContract(msg.sender, _tokens);
-        _transferTreasureFee(_communityTreasureFee);
+        _transferTreasureFee(_lockedOttaFee);
         emit OttaTokenPurchased(msg.sender, _tokens);
     }
 
@@ -374,9 +373,9 @@ contract Otta is Context, IERC20, IERC20Metadata {
     /*================== Internal Functions =====================*/
     /* Notice: Triggers every interval time
      * Unlocks  9000 tokens each time triggered
-     * Unlocked tokens are split into two: 'unlockedSupply' and 'communityTreasureFeeBalance'
+     * Unlocked tokens are split into two: 'unlockedSupply' and 'lockedOttaFeeBalance'
      * Buy is made from 'unlockedSupply'
-     * Mint for communityTreasure from 'communityTreasureFeeBalance'
+     * Mint for lockedOtta from 'lockedOttaFeeBalance'
      */
     function unlocked() internal {
         if (lockedSupply == 0) {
@@ -388,11 +387,12 @@ contract Otta is Context, IERC20, IERC20Metadata {
                 dividend.setEpoch(false);
                 dividendDayCounter = 0;
                 dividendTime = block.timestamp;
+                dividend.getDividendRequesting();
             }
         } else {
             lockedSupply = lockedSupply.sub(9000 * 10**18);
             unlockedSupply = unlockedSupply.add(7200 * 10**18);
-            communityTreasureFeeBalance = communityTreasureFeeBalance.add(1800 * 10**18);
+            lockedOttaFeeBalance = lockedOttaFeeBalance.add(1800 * 10**18);
             dividendDayCounter += 1;
             if (dividendDayCounter == dividendDay) {
                 dividend.setEpoch(true);
@@ -401,6 +401,7 @@ contract Otta is Context, IERC20, IERC20Metadata {
                 dividend.setEpoch(false);
                 dividendDayCounter = 0;
                 dividendTime = block.timestamp;
+                dividend.getDividendRequesting();
             }
         }
     }
@@ -538,28 +539,25 @@ contract Otta is Context, IERC20, IERC20Metadata {
         uint256 senderBalance = unlockedSupply;
         require(senderBalance >= amount, "Insufficient Unlocked Supply!");
         unlockedSupply = unlockedSupply.sub(amount);
-        _balances[recipient] = _balances[recipient].add(amount);
-        emit Transfer(address(this), recipient, amount);
+        _transfer(address(this), recipient, amount);
         _afterTokenTransfer(address(this), recipient, amount);
     }
 
     /*
-     * Notice: Transfer function written for the communityTreasure to transfer
-     * from "communityTreasureFeeBalance" after buying otta tokens
+     * Notice: Transfer function written for the lockedOtta to transfer
+     * from "lockedOttaFeeBalance" after buying otta tokens
      * 'sender' this contract
-     * 'recipient' communityTreasure contract
+     * 'recipient' lockedOtta contract
      * Requirements:
      * 'recipient' cannot be the zero address.
      * `sender` must have a balance of at least `amount`.
      */
     function _transferTreasureFee(uint256 amount) internal virtual {
-        _beforeTokenTransfer(address(this), communityTreasureAddress, amount);
-        uint256 senderBalance = communityTreasureFeeBalance;
+        _beforeTokenTransfer(address(this), lockedOtta, amount);
+        uint256 senderBalance = lockedOttaFeeBalance;
         require(senderBalance >= amount, "Insufficient Protocol Fee Balance!");
-        communityTreasureFeeBalance = communityTreasureFeeBalance.sub(amount);
-        _balances[communityTreasureAddress] = _balances[communityTreasureAddress].add(amount);
-
-        emit Transfer(address(this), communityTreasureAddress, amount);
-        _afterTokenTransfer(address(this), communityTreasureAddress, amount);
+        lockedOttaFeeBalance = lockedOttaFeeBalance.sub(amount);
+        _transfer(address(this), lockedOtta, amount);
+        _afterTokenTransfer(address(this), lockedOtta, amount);
     }
 }

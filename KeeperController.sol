@@ -55,7 +55,6 @@ contract KeeperController {
     // for other keeper
     uint96 public keeperRequirementPercentage;
     // set status of this contract 
-    bool public isManagerSetted;
     bool public isKeeperIDsSetted;
     bool public isTradeFromUniswapV2Setted;
     bool public isProtocolVaultSetted;
@@ -123,9 +122,7 @@ contract KeeperController {
      * '_manager' The manager address
      */
     function setManager(address _manager) public onlyOwner returns(address){
-        require(!isManagerSetted, "Already setted");
         require(_manager != address(0), "zero address");
-        isManagerSetted = true;
         manager = _manager;
         emit ManagerSetted(manager);
         return manager;
@@ -276,6 +273,7 @@ contract KeeperController {
             keeperBalancesMap[ottaLockKeeperId].currentBalance < keeperBalancesMap[ottaLockKeeperId].requirement ||
             keeperBalancesMap[gradualKeeperId].currentBalance < keeperBalancesMap[gradualKeeperId].requirement||
             keeperBalancesMap[ethPoolKeeperId].currentBalance < keeperBalancesMap[ethPoolKeeperId].requirement ||
+            keeperBalancesMap[ttfPoolKeeperId].currentBalance < keeperBalancesMap[ttfPoolKeeperId].requirement ||
             keeperBalancesMap[selfKeeperId].currentBalance < keeperBalancesMap[selfKeeperId].requirement;
         performData = checkData;
     }
@@ -284,11 +282,12 @@ contract KeeperController {
      * Notice: chainlink keeper method. It executes controller method
      */
     function performUpkeep(bytes calldata performData) external {
-        require(keeperBalancesMap[taumFeeKeeperId].currentBalance < keeperBalancesMap[taumFeeKeeperId].requirement ||
+        require((keeperBalancesMap[taumFeeKeeperId].currentBalance < keeperBalancesMap[taumFeeKeeperId].requirement ||
             keeperBalancesMap[ottaLockKeeperId].currentBalance < keeperBalancesMap[ottaLockKeeperId].requirement ||
             keeperBalancesMap[gradualKeeperId].currentBalance < keeperBalancesMap[gradualKeeperId].requirement||
             keeperBalancesMap[ethPoolKeeperId].currentBalance < keeperBalancesMap[ethPoolKeeperId].requirement ||
-            keeperBalancesMap[selfKeeperId].currentBalance < keeperBalancesMap[selfKeeperId].requirement);
+            keeperBalancesMap[ttfPoolKeeperId].currentBalance < keeperBalancesMap[ttfPoolKeeperId].requirement ||
+            keeperBalancesMap[selfKeeperId].currentBalance < keeperBalancesMap[selfKeeperId].requirement), "not epoch");
         controller();
         performData;
     }

@@ -9,5 +9,6 @@ interface IDividend{
     /* ================= Functions ================= */
         
     function setEpoch(bool _epoch) external returns(bool,uint256);
+    function getDividendRequesting() external;
 
 }

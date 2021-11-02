@@ -5,15 +5,13 @@ import {IWeth} from "./interfaces/IWeth.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IProtocolVault} from "./interfaces/IProtocolVault.sol";
 import {IEthereumPool} from "./interfaces/IEthereumPool.sol";
-import {IProtocolGradual} from "./interfaces/IProtocolGradual.sol";
 
 /// @title ProtocolVault
 /// @author Yotta21
 contract ProtocolVault is IProtocolVault {
 
     /* ============ Events ================ */
-    
-    event ManagerSetted(address _manager);
+
     event PriceSetted(address _priceAddress);
     event KeeperControllerSetted(address _keeperAddress);
     event ProtocolGradualSetted(address _protocolGradualAddress);
@@ -39,12 +37,9 @@ contract ProtocolVault is IProtocolVault {
     address public keeperControllerAddress;
     // set state of protocol vault
     bool public isEthPoolSetted;
-    bool public isManagerSetted;
     bool public isPriceSetted;
     bool public isKeeperControllerSetted;
     bool public isProtocolGradualSetted;
-    // importing gradual taum methods
-    IProtocolGradual public protocolGradual;
     // Importing wrapped ether methods
     IWeth public weth;
     // importing eth pool methods
@@ -98,14 +93,12 @@ contract ProtocolVault is IProtocolVault {
      * Params:
      * '_manager' The manager address.
      */
-    function setManager(address _manager) public onlyOwner returns(address){
-        require(!isManagerSetted,"Already Setted");
+    /*function setManager(address _manager) public onlyOwner returns(address){
         require(_manager != address(0),"zero address");
-        isManagerSetted = true;
         manager = _manager;
         emit ManagerSetted(manager);
         return manager;
-    }
+    }*/
 
     /* Notice: Setting price contract address methods
      * Params:
@@ -156,7 +149,6 @@ contract ProtocolVault is IProtocolVault {
         require(_protocolGradualAddress != address(0),"zero address");
         isProtocolGradualSetted = true;
         protocolGradualAddress = _protocolGradualAddress;
-        protocolGradual = IProtocolGradual(protocolGradualAddress);
         emit ProtocolGradualSetted(protocolGradualAddress);
         return protocolGradualAddress;
     }
@@ -178,9 +170,7 @@ contract ProtocolVault is IProtocolVault {
     }
 
     /*================= External Functions=================*/
-    receive() external payable{
-        require(msg.sender == wethAddress, "only weth");
-    }
+    receive() external payable{}
 
     /*
      * Notice: This method can callable from Yotta Token contract

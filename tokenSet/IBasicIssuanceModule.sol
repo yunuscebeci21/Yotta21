@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {
     ISetToken
-} from "@setprotocol/set-protocol-v2/contracts/interfaces/ISetToken.sol";
+} from "../tokenSet/ISetToken.sol";
 
 interface IBasicIssuanceModule {
     function issue(
