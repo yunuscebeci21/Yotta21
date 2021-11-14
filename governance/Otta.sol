@@ -6,13 +6,14 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-import {IDividend} from "./interfaces/IDividend.sol";
-import {IPrice} from "./interfaces/IPrice.sol";
+import {IDividend} from "../interfaces/IDividend.sol";
+import {IPrice} from "../interfaces/IPrice.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 
 
 /// @title Otta
 /// @author Yotta21
-contract Otta is Context, IERC20, IERC20Metadata {
+contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
 
     using SafeMath for uint256;
 
@@ -24,6 +25,10 @@ contract Otta is Context, IERC20, IERC20Metadata {
     event IntervalSetted(uint256 _interval);
     event DividendLockDaySetted(uint256 _dividendDay, uint256 _lockDay);
     event OttaTokenPurchased(address indexed _resipient, uint256 _ottaAmount);
+    /// @notice An event thats emitted when an account changes its delegate
+    event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
+    /// @notice An event thats emitted when a delegate account's vote balance changes
+    event DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance);
 
     /* ================ State Variables ================== */
 
@@ -34,7 +39,15 @@ contract Otta is Context, IERC20, IERC20Metadata {
     // address of dividend contract
     address public dividendAddress;
     // address of lockedOtta contract
-    address private lockedOtta;
+    address public lockedOtta;
+    //tresury vester 1
+    address public treasuryVester1;
+    //tresury vester 2
+    address public treasuryVester2;
+    //tresury vester 3
+    address public treasuryVester3;
+    //tresury vester 4
+    address public treasuryVester4;
     // token name for otta token
     string private _name;
     // token symbol for otta token
@@ -62,9 +75,15 @@ contract Otta is Context, IERC20, IERC20Metadata {
     // daily cumulative community treasure fee
     uint256 public lockedOttaFeeBalance;
     // max mint token - total otta supply
-    uint256 public constant TOTAL_OTTA_AMOUNT = 55 * 10**24;
+    uint256 public constant TOTAL_OTTA_AMOUNT = 88000000 * 10**18;
     // mint amount for ico
-    uint256 public constant ICO_SUPPLY = 24040 * 10**20;
+    uint256 public constant ICO_SUPPLY = 6160000 * 10**18;
+    // mint amount for treasury vester
+    uint256 public constant TREASURY_VESTER = 17600000 * 10**18;
+    /// @notice The EIP-712 typehash for the contract's domain
+    bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
+    /// @notice The EIP-712 typehash for the delegation struct used by the contract
+    bytes32 public constant DELEGATION_TYPEHASH = keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
     // otta contract set status
     bool public isPriceSetted;
     bool public isDividendSetted;
@@ -72,11 +91,24 @@ contract Otta is Context, IERC20, IERC20Metadata {
     mapping(address => mapping(address => uint256)) private _allowances;
     // Official record of token balances for each account
     mapping(address => uint256) private _balances;
+    /// @notice A record of states for signing / validating signatures
+    mapping (address => uint) public nonces;
+    /// @notice A record of each accounts delegate
+    mapping (address => address) public delegates;
+    /// @notice A record of votes checkpoints for each account, by index
+    mapping (address => mapping (uint32 => Checkpoint)) public checkpoints;
+    /// @notice The number of checkpoints for each account
+    mapping (address => uint32) public numCheckpoints;
+    /// @notice A checkpoint for marking number of votes from a given block
+    struct Checkpoint {
+        uint32 fromBlock;
+        uint256 votes;
+    }
     // importing dividend contract interface as dividend
     IDividend public dividend;
     // importing price contract interface as price
     IPrice public price;
-
+    
     /*================== Modifiers =====================*/
 
     /*
@@ -97,7 +129,11 @@ contract Otta is Context, IERC20, IERC20Metadata {
         string memory name_,
         string memory symbol_,
         uint256 _interval,
-        address _lockedOtta
+        address _lockedOtta,
+        address _treasuryVester1,
+        address _treasuryVester2,
+        address _treasuryVester3,
+        address _treasuryVester4
     ) {
         ownerAddress = msg.sender;
         require(_manager != address(0), "zero address");
@@ -111,9 +147,21 @@ contract Otta is Context, IERC20, IERC20Metadata {
         lockDay = 2;
         require(_lockedOtta != address(0), "zero address");
         lockedOtta = _lockedOtta;
+        require(_treasuryVester1 != address(0), "zero address");
+        treasuryVester1 = _treasuryVester1;
+        require(_treasuryVester2 != address(0), "zero address");
+        treasuryVester2 = _treasuryVester2;
+        require(_treasuryVester3 != address(0), "zero address");
+        treasuryVester3 = _treasuryVester3;
+        require(_treasuryVester4 != address(0), "zero address");
+        treasuryVester4 = _treasuryVester4;
         _mint(address(this), TOTAL_OTTA_AMOUNT);
-        _transfer(address(this), ownerAddress, ICO_SUPPLY.mul(80).div(100));
-        _transfer(address(this), lockedOtta, ICO_SUPPLY.mul(20).div(100));
+        _transfer(address(this), ownerAddress, ICO_SUPPLY.mul(80).div(100)); // 4 928 000
+        _transfer(address(this), lockedOtta, ICO_SUPPLY.mul(20).div(100)); // 1 232 000
+        _transfer(address(this), treasuryVester1, TREASURY_VESTER.mul(10).div(100)); // 1 760 000
+        _transfer(address(this), treasuryVester2, TREASURY_VESTER.mul(20).div(100)); // 3 520 000
+        _transfer(address(this), treasuryVester3, TREASURY_VESTER.mul(30).div(100)); // 5 280 000
+        _transfer(address(this), treasuryVester4, TREASURY_VESTER.mul(40).div(100)); // 7 040 000
         lockedSupply = _totalSupply.sub(ICO_SUPPLY);
     }
 
@@ -322,6 +370,35 @@ contract Otta is Context, IERC20, IERC20Metadata {
         return true;
     }
 
+    /**
+     * @notice Delegate votes from `msg.sender` to `delegatee`
+     * @param delegatee The address to delegate votes to
+     */
+    function delegate(address delegatee) public {
+        return _delegate(msg.sender, delegatee);
+    }
+
+    /**
+     * @notice Delegates votes from signatory to `delegatee`
+     * @param delegatee The address to delegate votes to
+     * @param nonce The contract state required to match the signature
+     * @param expiry The time at which to expire the signature
+     * @param v The recovery byte of the signature
+     * @param r Half of the ECDSA signature pair
+     * @param s Half of the ECDSA signature pair
+     */
+    function delegateBySig(address delegatee, uint nonce, uint expiry, uint8 v, bytes32 r, bytes32 s) public {
+        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(_name)), getChainId(), address(this)));
+        bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        address signatory = ecrecover(digest, v, r, s);
+        require(signatory != address(0), "Comp::delegateBySig: invalid signature");
+        require(nonce == nonces[signatory]++, "Comp::delegateBySig: invalid nonce");
+        require(block.timestamp <= expiry, "Comp::delegateBySig: signature expired");
+        return _delegate(signatory, delegatee);
+    }
+
+
     /*================== External Functions =====================*/
 
     /*
@@ -348,12 +425,64 @@ contract Otta is Context, IERC20, IERC20Metadata {
         emit OttaTokenPurchased(msg.sender, _tokens);
     }
 
+    /**
+     * @notice Gets the current votes balance for `account`
+     * @param account The address to get votes balance
+     * @return The number of current votes for `account`
+     */
+    function getCurrentVotes(address account) external view returns (uint256) {
+        uint32 nCheckpoints = numCheckpoints[account];
+        return nCheckpoints > 0 ? checkpoints[account][nCheckpoints - 1].votes : 0;
+    }
+
+    /**
+     * @notice Determine the prior number of votes for an account as of a block number
+     * @dev Block number must be a finalized block or else this function will revert to prevent misinformation.
+     * @param account The address of the account to check
+     * @param blockNumber The block number to get the vote balance at
+     * @return The number of votes the account had as of the given block
+     */
+    function getPriorVotes(address account, uint blockNumber) external view returns (uint256) {
+        require(blockNumber < block.number, "Comp::getPriorVotes: not yet determined");
+
+        uint32 nCheckpoints = numCheckpoints[account];
+        if (nCheckpoints == 0) {
+            return 0;
+        }
+
+        // First check most recent balance
+        if (checkpoints[account][nCheckpoints - 1].fromBlock <= blockNumber) {
+            return checkpoints[account][nCheckpoints - 1].votes;
+        }
+
+        // Next check implicit zero balance
+        if (checkpoints[account][0].fromBlock > blockNumber) {
+            return 0;
+        }
+
+        uint32 lower = 0;
+        uint32 upper = nCheckpoints - 1;
+        while (upper > lower) {
+            uint32 center = upper - (upper - lower) / 2; // ceil, avoiding overflow
+            Checkpoint memory cp = checkpoints[account][center];
+            if (cp.fromBlock == blockNumber) {
+                return cp.votes;
+            } else if (cp.fromBlock < blockNumber) {
+                lower = center;
+            } else {
+                upper = center - 1;
+            }
+        }
+        return checkpoints[account][lower].votes;
+    }
+
     /*
      * Notice: Checking the upkeepNeeded condition
      */
     function checkUpkeep(bytes calldata checkData)
         external
         view
+        override
         returns (bool upkeepNeeded, bytes memory performData)
     {
         upkeepNeeded = (block.timestamp - lastTimeStamp) > interval;
@@ -363,12 +492,14 @@ contract Otta is Context, IERC20, IERC20Metadata {
     /*
      * Notice: Chainlink Keeper method calls unlocked method
      */
-    function performUpkeep(bytes calldata performData) external {
+    function performUpkeep(bytes calldata performData) external override {
         require((block.timestamp - lastTimeStamp) > interval, "not epoch");
         lastTimeStamp = block.timestamp;
         unlocked();
         performData;
     }
+
+    
 
     /*================== Internal Functions =====================*/
     /* Notice: Triggers every interval time
@@ -390,9 +521,9 @@ contract Otta is Context, IERC20, IERC20Metadata {
                 dividend.getDividendRequesting();
             }
         } else {
-            lockedSupply = lockedSupply.sub(9000 * 10**18);
-            unlockedSupply = unlockedSupply.add(7200 * 10**18);
-            lockedOttaFeeBalance = lockedOttaFeeBalance.add(1800 * 10**18);
+            lockedSupply = lockedSupply.sub(11000 * 10**18);
+            unlockedSupply = unlockedSupply.add(8800 * 10**18);
+            lockedOttaFeeBalance = lockedOttaFeeBalance.add(2200 * 10**18);
             dividendDayCounter += 1;
             if (dividendDayCounter == dividendDay) {
                 dividend.setEpoch(true);
@@ -447,6 +578,8 @@ contract Otta is Context, IERC20, IERC20Metadata {
         _balances[recipient] = _balances[recipient].add(amount);
         emit Transfer(sender, recipient, amount);
         _afterTokenTransfer(sender, recipient, amount);
+
+        _moveDelegates(delegates[sender], delegates[recipient], amount);
     }
 
     /*
@@ -463,6 +596,10 @@ contract Otta is Context, IERC20, IERC20Metadata {
         _balances[account] = _balances[account].add(amount);
         emit Transfer(address(0), account, amount);
         _afterTokenTransfer(address(0), account, amount);
+
+        // move delegates
+        _moveDelegates(address(0), delegates[account], amount);
+
     }
 
     /*
@@ -559,5 +696,59 @@ contract Otta is Context, IERC20, IERC20Metadata {
         lockedOttaFeeBalance = lockedOttaFeeBalance.sub(amount);
         _transfer(address(this), lockedOtta, amount);
         _afterTokenTransfer(address(this), lockedOtta, amount);
+    }
+
+    function _delegate(address delegator, address delegatee) internal {
+        address currentDelegate = delegates[delegator];
+        uint256 delegatorBalance = _balances[delegator];
+        delegates[delegator] = delegatee;
+
+        emit DelegateChanged(delegator, currentDelegate, delegatee);
+
+        _moveDelegates(currentDelegate, delegatee, delegatorBalance);
+    }
+
+    
+
+    function _moveDelegates(address srcRep, address dstRep, uint256 amount) internal {
+        if (srcRep != dstRep && amount > 0) {
+            if (srcRep != address(0)) {
+                uint32 srcRepNum = numCheckpoints[srcRep];
+                uint256 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
+                uint256 srcRepNew = srcRepOld.sub(amount);
+                _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
+            }
+
+            if (dstRep != address(0)) {
+                uint32 dstRepNum = numCheckpoints[dstRep];
+                uint256 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
+                uint256 dstRepNew = dstRepOld.add(amount);
+                _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
+            }
+        }
+    }
+
+    function _writeCheckpoint(address delegatee, uint32 nCheckpoints, uint256 oldVotes, uint256 newVotes) internal {
+      uint32 blockNumber = safe32(block.number, "Comp::_writeCheckpoint: block number exceeds 32 bits");
+
+      if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
+          checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;
+      } else {
+          checkpoints[delegatee][nCheckpoints] = Checkpoint(blockNumber, newVotes);
+          numCheckpoints[delegatee] = nCheckpoints + 1;
+      }
+
+      emit DelegateVotesChanged(delegatee, oldVotes, newVotes);
+    }
+
+    function safe32(uint n, string memory errorMessage) internal pure returns (uint32) {
+        require(n < 2**32, errorMessage);
+        return uint32(n);
+    }
+
+    function getChainId() internal view returns (uint) {
+        uint256 chainId;
+        chainId = block.chainid;
+        return chainId;
     }
 }

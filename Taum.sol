@@ -10,11 +10,12 @@ import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {ITaum} from "./interfaces/ITaum.sol";
 import {IProtocolVault} from "./interfaces/IProtocolVault.sol";
 import {IPrice} from "./interfaces/IPrice.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 
 /// @title Taum
 /// @author Yotta21
 
-contract Taum is Context, IERC20, IERC20Metadata, ITaum {
+contract Taum is Context, IERC20, IERC20Metadata, ITaum, KeeperCompatibleInterface{
     using SafeMath for uint256;
 
     /*================== Events ===================*/
@@ -325,6 +326,7 @@ contract Taum is Context, IERC20, IERC20Metadata, ITaum {
     function checkUpkeep(bytes calldata checkData)
         external
         view
+        override
         returns (bool upkeepNeeded, bytes memory performData)
     {
         upkeepNeeded = (block.timestamp - lastTimeStamp) > interval;
@@ -334,7 +336,7 @@ contract Taum is Context, IERC20, IERC20Metadata, ITaum {
     /*
      * Notice: Chainlink Keeper method calls mintProtocol method
      */
-    function performUpkeep(bytes calldata performData) external {
+    function performUpkeep(bytes calldata performData) external override{
         require((block.timestamp - lastTimeStamp) > interval, "not epoch");
         lastTimeStamp = block.timestamp;
         mintProtocolFee();
@@ -346,7 +348,7 @@ contract Taum is Context, IERC20, IERC20Metadata, ITaum {
      *  Notice: calculate protocol fee and mint the dividend contract
      */
     function mintProtocolFee() internal {
-        uint256 _protocolFee = (_totalSupply.mul(YEARLY_VALUE)).div(100).div(365.25 * 10 ** 18);
+        uint256 _protocolFee = (_totalSupply.mul(YEARLY_VALUE)).div(100).div(365 * 10 ** 18);
         (,,uint256 _taumPrice) = price.getTaumPrice(0);
         uint256 _feeQuantity = (_taumPrice.mul(_protocolFee)).div(10**18);
         protocolVault.withdraw(payable(dividendAddress), _feeQuantity);

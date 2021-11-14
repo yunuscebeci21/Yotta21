@@ -6,11 +6,12 @@ import {IUniswapV2Adapter} from "./interfaces/IUniswapV2Adapter.sol";
 import {ITTFPool} from "./interfaces/ITTFPool.sol";
 import {IStreamingFeeModule} from "./tokenSet/IStreamingFeeModule.sol";
 import {ISetToken} from "@setprotocol/set-protocol-v2/contracts/interfaces/ISetToken.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 
 /// @title TTFPool
 /// @author Yotta21
 
-contract TTFPool is ITTFPool {
+contract TTFPool is ITTFPool, KeeperCompatibleInterface{
 
     /*================== Events ===================*/
 
@@ -109,6 +110,7 @@ contract TTFPool is ITTFPool {
     function checkUpkeep(bytes calldata checkData)
         external
         view
+        override
         returns (bool upkeepNeeded, bytes memory performData)
     {
         upkeepNeeded = (block.timestamp - lastTimeStamp) > interval;
@@ -118,7 +120,7 @@ contract TTFPool is ITTFPool {
     /*
      * Notice: Chainlink Keeper method calls unlocked method
      */
-    function performUpkeep(bytes calldata performData) external {
+    function performUpkeep(bytes calldata performData) external override{
         require((block.timestamp - lastTimeStamp) > interval, "not epoch");
         lastTimeStamp = block.timestamp;
         collectStreamingFee();

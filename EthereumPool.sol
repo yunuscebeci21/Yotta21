@@ -13,9 +13,11 @@ import {ITTFPool} from "./interfaces/ITTFPool.sol";
 import {ITradeComponents} from "./interfaces/ITradeComponents.sol";
 import {ITaum} from "./interfaces/ITaum.sol";
 
+import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
+
 /// @title EthereumPool
 /// @author Yotta21
-contract EthereumPool is IEthereumPool {
+contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
 
     using SafeMath for uint256;
     
@@ -337,6 +339,7 @@ contract EthereumPool is IEthereumPool {
     function checkUpkeep(bytes calldata checkData)
         external
         view
+        override
         returns (bool upkeepNeeded, bytes memory performData)
     {
         upkeepNeeded = limit >= limitValue;
@@ -348,7 +351,7 @@ contract EthereumPool is IEthereumPool {
      *
      */
 
-    function performUpkeep(bytes calldata performData) external {
+    function performUpkeep(bytes calldata performData) external override{
         require((limit >= limitValue), "not epoch");
         limitController();
         performData;

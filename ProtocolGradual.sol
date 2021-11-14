@@ -13,7 +13,9 @@ import {IWeth} from "./interfaces/IWeth.sol";
 import {IPrice} from "./interfaces/IPrice.sol";
 import {IUniswapPool} from "./interfaces/IUniswapPool.sol";
 
-contract GradualTaum {
+import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
+
+contract ProtocolGradual is KeeperCompatibleInterface{
     using SafeMath for uint256;
 
     /*================== Events ===================*/
@@ -267,6 +269,7 @@ contract GradualTaum {
      */
     function checkUpkeep(bytes calldata checkData)
         external
+        override
         returns (bool upkeepNeeded, bytes memory performData)
     {
         (,uint256 _percent,) = price.getTaumPrice(0);
@@ -280,7 +283,7 @@ contract GradualTaum {
     /*
      * Notice:  Chainlink Keeper method calls vaultPercentOfTotal method
      */
-    function performUpkeep(bytes calldata performData) external {
+    function performUpkeep(bytes calldata performData) external override{
         (,uint256 _percent,) = price.getTaumPrice(0);
         require((_percent >= value1 && _percent <= value2) ||
             (_percent > value2 && _percent <= value3) ||

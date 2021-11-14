@@ -69,7 +69,6 @@ contract Price is IPrice{
     bool public isTTFPoolSetted;
     bool public isEthPoolSetted;
     bool public isUniswapV2AdapterSetted;
-    bool public isKeeperIDsSetted;
     // map of components univ2
     mapping(address => address) private componentsUniPools;
     // importing weth methods
@@ -239,8 +238,6 @@ contract Price is IPrice{
         uint256 _ttfPoolKeeperId,
         uint256 _selfKeeperId
     ) public onlyOwner returns(uint256,uint256,uint256,uint256,uint256,uint256){
-        require(!isKeeperIDsSetted, "Already setted");
-        isKeeperIDsSetted = true;
         require(_taumFeeKeeperId != 0);
         taumFeeKeeperId = _taumFeeKeeperId;
         require(_ottaLockKeeperId != 0);
@@ -379,11 +376,17 @@ contract Price is IPrice{
         }
         uint256 _reserveAmountInUniswap = (_reserveWeth.mul(2)).mul(_percent).div(10**20);
         
-        uint256 _totalLinkBalance = uint256(getKeeperBalance()).mul(this.getLinkPrice()).div(10**18);
+        uint256 _totalLinkBalance;
+        if(taumFeeKeeperId!=0 && ottaLockKeeperId!=0 && ethPoolKeeperId!=0 && gradualKeeperId!=0 && ttfPoolKeeperId!=0 && selfKeeperId!=0){
+            _totalLinkBalance = uint256(getKeeperBalance()).mul(this.getLinkPrice()).div(10**18);
+        }else{
+            _totalLinkBalance = 0;
+        }
         
         ERC20 _taum = ERC20(taum);
-        _totalAmount = _poolAndVaultBalance.add(_reserveAmountInUniswap).add(_ttfAmount).add(_totalLinkBalance);
+        uint256 _totalAmountForPrice = _poolAndVaultBalance.add(_reserveAmountInUniswap).add(_ttfAmount).add(_totalLinkBalance);
+        _totalAmount = _poolAndVaultBalance.add(_reserveAmountInUniswap).add(_ttfAmount);
         _protocolPercent = weth.balanceOf(protocolVaultAddress).mul(10**20).div(_totalAmount);
-        _taumPrice = _totalAmount.mul(10**18).div(_taum.totalSupply());
+        _taumPrice = _totalAmountForPrice.mul(10**18).div(_taum.totalSupply());
     }
 }
