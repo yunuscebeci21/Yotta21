@@ -2,7 +2,8 @@
 pragma solidity ^0.8.0;
 
 interface IUniswapV2Router02 {
-
+    /* ================= Functions ================= */
+    /// @notice swapExactTokensForTokens function in Uniswap V2 Router 02
     function swapExactTokensForTokens(
         uint256 amountIn,
         uint256 amountOutMin,
@@ -11,6 +12,7 @@ interface IUniswapV2Router02 {
         uint256 deadline
     ) external returns (uint256[] memory amounts);
 
+     /// @notice swapTokensForExactTokens function in Uniswap V2 Router 02
     function swapTokensForExactTokens(
         uint256 amountOut,
         uint256 amountInMax,
@@ -19,6 +21,7 @@ interface IUniswapV2Router02 {
         uint256 deadline
     ) external returns (uint256[] memory amounts);
 
+    /// @notice addLiquidity function in Uniswap V2 Router 02
     function addLiquidity(
         address tokenA,
         address tokenB,
@@ -35,7 +38,8 @@ interface IUniswapV2Router02 {
             uint256 amountB,
             uint256 liquidity
         );
-
+    
+    /// @notice removeLiquidity function in Uniswap V2 Router 02
     function removeLiquidity(
         address tokenA,
         address tokenB,

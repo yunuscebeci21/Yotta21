@@ -1,213 +1,133 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IWeth} from "./interfaces/IWeth.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IProtocolVault} from "./interfaces/IProtocolVault.sol";
-import {IEthereumPool} from "./interfaces/IEthereumPool.sol";
+import { IWeth } from "./interfaces/IWeth.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { IProtocolVault } from "./interfaces/IProtocolVault.sol";
+import { IEthereumPool } from "./interfaces/IEthereumPool.sol";
 
 /// @title ProtocolVault
 /// @author Yotta21
 contract ProtocolVault is IProtocolVault {
+  /* ============ Events ================ */
+  /// @notice An event thats emitted when ProtocolGradual contract address setting 
+  event ProtocolGradualSetted(address _protocolGradualAddress);
+  /// @notice An event thats emitted when EthereumPool contract address setting
+  event EthPoolSetted(address _ethPoolAddress);
 
-    /* ============ Events ================ */
+  /*============ State Variables ================ */
 
-    event PriceSetted(address _priceAddress);
-    event KeeperControllerSetted(address _keeperAddress);
-    event ProtocolGradualSetted(address _protocolGradualAddress);
-    event EthPoolSetted(address _ethPoolAddress);
+  // Address of contract creater
+  address public owner;
+  // Address of Gradual Reduction Contract
+  address public protocolGradualAddress;
+  // Address of Ethereum Pool Contact
+  address public ethPoolAddress;
+  // Address of wrapper ether
+  address public wethAddress;
+  // address of taum address
+  address public taumAddress;
+  // address of price contract
+  address public priceAddress;
+  // address of keeper controller
+  address public keeperControllerAddress;
+  // set state of protocol vault
+  bool public isEthPoolSetted;
+  bool public isProtocolGradualSetted;
+  // Importing wrapped ether methods
+  IWeth public weth;
+  // importing eth pool methods
+  IEthereumPool public ethPool;
 
-    /*============ State Variables ================ */
+  /*============ Modifiers ================ */
+  /*
+   * Throws if the sender is not one of poolTokenAdapter, taumToken,
+   *  priceAddress or keeperControllerAddres
+   */
+  modifier onlyProtocolContracts() {
+    require(
+      (msg.sender == taumAddress ||
+        msg.sender == keeperControllerAddress ||
+        msg.sender == protocolGradualAddress),
+      "Only Protocol"
+    );
+    _;
+  }
 
-    // Address of contract creater
-    address public owner;
-    // address of manager
-    address public manager;
-    // Address of Gradual Reduction Contract
-    address public protocolGradualAddress;
-    // Address of Ethereum Pool Contact
-    address public ethPoolAddress;
-    // Address of wrapper ether
-    address public wethAddress;
-    // address of taum address
-    address public taumAddress;
-    // address of price contract
-    address public priceAddress;
-    // address of keeper controller
-    address public keeperControllerAddress;
-    // set state of protocol vault
-    bool public isEthPoolSetted;
-    bool public isPriceSetted;
-    bool public isKeeperControllerSetted;
-    bool public isProtocolGradualSetted;
-    // Importing wrapped ether methods
-    IWeth public weth;
-    // importing eth pool methods
-    IEthereumPool public ethPool;
+  /*
+   * Throws if the sender is not an owner of this contract
+   */
+  modifier onlyOwner() {
+    require(msg.sender == owner, "Only Owner");
+    _;
+  }
 
-    /*============ Modifiers ================ */
-    /*
-     * Throws if the sender is not one of poolTokenAdapter, taumToken,
-     *  priceAddress or keeperControllerAddres
-     */
-    modifier onlyProtocolContracts() {
-        require(
-            (
-                msg.sender == taumAddress ||
-                msg.sender == keeperControllerAddress ||
-                msg.sender == protocolGradualAddress),
-            "Only Protocol"
-        );
-        _;
-    }
-    
-    /*
-     * Throws if the sender is not an owner of this contract
-     */
-    modifier onlyOwner() {
-        require(msg.sender == owner || msg.sender == manager, "Only Owner");
-        _;
-    }
+  /*============ Constructor ================ */
+  constructor(address _weth, address _taumAddress) {
+    owner = msg.sender;
+    require(_weth != address(0), "zero address");
+    wethAddress = _weth;
+    weth = IWeth(wethAddress);
+    require(_taumAddress != address(0), "zero address");
+    taumAddress = _taumAddress;
+  }
 
-    /*============ Constructor ================ */
-    constructor(
-        address _manager,
-        address _weth,
-        address _taumAddress
-    ) {
-        owner = msg.sender;
-        require(_manager != address(0), "zero address");
-        manager = _manager;
-        require(_weth != address(0), "zero address");
-        wethAddress = _weth;
-        weth = IWeth(wethAddress);
-        require(_taumAddress != address(0), "zero address");
-        taumAddress = _taumAddress;
-        
-    }
+  /*================= Functions=================*/
+  receive() external payable {}
 
-    /*================= Functions=================*/
-    /*================= Public Functions=================*/
+  /*================= External Functions=================*/
+  /// @inheritdoc IProtocolVault
+  function withdraw(address payable _userAddress, uint256 _withdrawAmount)
+    external
+    override
+    onlyProtocolContracts
+    returns (bool state)
+  {
+    weth.withdraw(_withdrawAmount);
+    _userAddress.transfer(_withdrawAmount);
+    emit WithDrawtoUser(_userAddress, _withdrawAmount);
+    return (true);
+  }
 
-    /* Notice: Setting manager address methods
-     * Params:
-     * '_manager' The manager address.
-     */
-    /*function setManager(address _manager) public onlyOwner returns(address){
-        require(_manager != address(0),"zero address");
-        manager = _manager;
-        emit ManagerSetted(manager);
-        return manager;
-    }*/
+  /// @inheritdoc IProtocolVault
+  function feedPool(uint256 _amount) external override returns (bool) {
+    require(msg.sender == protocolGradualAddress, "Only Gradual Taum");
+    bool _successTransfer = weth.transfer(ethPoolAddress, _amount);
+    require(_successTransfer, "Transfer failed.");
+    ethPool.addLimit(_amount);
+    emit PoolFeeded(ethPoolAddress, _amount);
+    return true;
+  }
 
-    /* Notice: Setting price contract address methods
-     * Params:
-     * '_priceAddress' The price contract address.
-     */
-    function setPrice(address _priceAddress)
-        public
-        onlyOwner
-        returns (address)
-    {
-        require(!isPriceSetted,"Already Setted");
-        require(_priceAddress != address(0),"zero address");
-        isPriceSetted = true;
-        priceAddress = _priceAddress;
-        emit PriceSetted(priceAddress);
-        return _priceAddress;
-    }
+  /*================= Public Functions=================*/
+  /// @notice Setting ProtocolGradual address only once
+  /// @param _protocolGradualAddress The address of ProtocolGradual contract
+  function setProtocolGradual(address _protocolGradualAddress)
+    public
+    onlyOwner
+    returns (address)
+  {
+    require(!isProtocolGradualSetted, "Already Setted");
+    require(_protocolGradualAddress != address(0), "zero address");
+    isProtocolGradualSetted = true;
+    protocolGradualAddress = _protocolGradualAddress;
+    emit ProtocolGradualSetted(protocolGradualAddress);
+    return protocolGradualAddress;
+  }
 
-    /*
-     * Notice: Setting keeper controller contract address only once
-     * Return: 
-     * '_keeperAddress' The new keeper controller contract address.
-     */
-    function setKeeperController(address _keeperAddress)
-        public
-        onlyOwner
-        returns (address)
-    {
-        require(!isKeeperControllerSetted,"Already Setted");
-        require(_keeperAddress != address(0),"zero address");
-        isKeeperControllerSetted = true;
-        keeperControllerAddress = _keeperAddress;
-        emit KeeperControllerSetted(keeperControllerAddress);
-        return keeperControllerAddress;
-    }
-    
-    /*
-     * Notice: Setting protocol gradual address only once
-     * Return: 
-     * '_protocolGradualAddress' The new protocol gradual address.
-     */
-    function setProtocolGradual(address _protocolGradualAddress)
-        public
-        onlyOwner
-        returns (address)
-    {
-        require(!isProtocolGradualSetted,"Already Setted");
-        require(_protocolGradualAddress != address(0),"zero address");
-        isProtocolGradualSetted = true;
-        protocolGradualAddress = _protocolGradualAddress;
-        emit ProtocolGradualSetted(protocolGradualAddress);
-        return protocolGradualAddress;
-    }
-    
-    /*
-     * Notice: Setting ethereum pool address only once
-     * Return: 
-     * '_ethereumPoolAddress' The new ethereum pool address.
-     */
-    function setEthPool(address payable _ethPoolAddress) public onlyOwner returns(address){
-        require(!isEthPoolSetted,"Already Setted");
-        require(_ethPoolAddress != address(0),"zero address");
-        isEthPoolSetted = true;
-        ethPoolAddress = _ethPoolAddress;
-        ethPool = IEthereumPool(_ethPoolAddress);
-        emit EthPoolSetted(ethPoolAddress);
-        return(ethPoolAddress);
-        
-    }
-
-    /*================= External Functions=================*/
-    receive() external payable{}
-
-    /*
-     * Notice: This method can callable from Yotta Token contract
-     *         It will send calculated withdrawal quantity of ETH to user
-     * Params:
-     * '_userAddress' The user address
-     * '_withdrawPrice' The amount of withdraw
-     */
-    function withdraw(address payable _userAddress, uint256 _withdrawPrice)
-        external
-        override
-        onlyProtocolContracts
-        returns (bool state)
-    {
-        weth.withdraw(_withdrawPrice);
-        _userAddress.transfer(_withdrawPrice);
-
-        emit WithDrawtoUser(_userAddress, _withdrawPrice);
-        return (true);
-    }
-
-    /*
-     * Notice: It is for protocol gradual contract
-     * Params:
-     * '_amount' The transfer amount
-     */
-    function feedPool(uint256 _amount)
-        external
-        override
-        returns (bool)
-    {
-        require(msg.sender == protocolGradualAddress, "Only Gradual Taum");
-        bool _successTransfer = weth.transfer(ethPoolAddress, _amount);
-        require(_successTransfer, "Transfer failed.");
-        ethPool.addLimit(_amount);
-        emit PoolFeeded(ethPoolAddress, _amount);
-
-        return true;
-    }
+  /// @notice Setting EthereumPool address only once
+  /// @param _ethPoolAddress The EthereumPool contract address.
+  function setEthPool(address payable _ethPoolAddress)
+    public
+    onlyOwner
+    returns (address)
+  {
+    require(!isEthPoolSetted, "Already Setted");
+    require(_ethPoolAddress != address(0), "zero address");
+    isEthPoolSetted = true;
+    ethPoolAddress = _ethPoolAddress;
+    ethPool = IEthereumPool(_ethPoolAddress);
+    emit EthPoolSetted(ethPoolAddress);
+    return (ethPoolAddress);
+  }
 }
