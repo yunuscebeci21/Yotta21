@@ -29,8 +29,6 @@ contract ProtocolVault is IProtocolVault {
   address public taumAddress;
   // address of price contract
   address public priceAddress;
-  // address of keeper controller
-  address public keeperControllerAddress;
   // set state of protocol vault
   bool public isEthPoolSetted;
   bool public isProtocolGradualSetted;
@@ -47,7 +45,6 @@ contract ProtocolVault is IProtocolVault {
   modifier onlyProtocolContracts() {
     require(
       (msg.sender == taumAddress ||
-        msg.sender == keeperControllerAddress ||
         msg.sender == protocolGradualAddress),
       "Only Protocol"
     );

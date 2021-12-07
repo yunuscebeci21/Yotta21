@@ -12,7 +12,7 @@ import { ITTFFPool } from "./interfaces/ITTFFPool.sol";
 /// @title EthereumPoolTTFAdapter
 /// @author Yotta21
 /// @notice TTFF issue takes place
-contract EthereumPoolTTFAdapter is IEthereumPoolTTFFAdapter {
+contract EthereumPoolTTFFAdapter is IEthereumPoolTTFFAdapter {
   /* ================= Events ================= */
   /// @notice An event thats emitted when TradeFromUniswapV2 contract setting
   event TradeFromUniswapV2Setted(address _tradeFromUniswapV2Address);

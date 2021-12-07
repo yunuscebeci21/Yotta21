@@ -69,7 +69,6 @@ contract Price is IPrice {
   /* ================ Constructor ================== */
   constructor(
     address _weth,
-    address _linkTokenUniPool,
     address _ttffUniPool,
     address _ottaUniPool,
     address _taum,
@@ -80,8 +79,6 @@ contract Price is IPrice {
     require(_weth != address(0), "zero address");
     weth = IWeth(_weth);
     wethAddress = _weth;
-    require(_linkTokenUniPool != address(0), "zero address");
-    linkTokenUniPool = _linkTokenUniPool;
     require(_ttffUniPool != address(0), "zero address");
     ttffUniPool = _ttffUniPool;
     require(_ottaUniPool != address(0), "zero address");

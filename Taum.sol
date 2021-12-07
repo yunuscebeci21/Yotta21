@@ -47,7 +47,7 @@ contract Taum is
   /// @notice Total supply
   uint256 private _totalSupply;
   /// @notice Yearly percent of total supply
-  uint256 public constant YEARLY_VALUE = 0.8766 * 10**18;
+  uint256 public constant YEARLY_VALUE = 0.8760 * 10**18;
   /// @notice Chainlink keeper call time
   uint256 public immutable interval;
   /// @notice Block Timestamp

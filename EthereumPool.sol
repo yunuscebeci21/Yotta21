@@ -9,7 +9,7 @@ import { ISetToken } from "@setprotocol/set-protocol-v2/contracts/interfaces/ISe
 import { IEthereumPool } from "./interfaces/IEthereumPool.sol";
 import { IPrice } from "./interfaces/IPrice.sol";
 import { ITTFFPool } from "./interfaces/ITTFFPool.sol";
-import { ITradeComponents } from "./interfaces/ITradeComponents.sol";
+import { ITradeFromUniswapV2 } from "./interfaces/ITradeFromUniswapV2.sol";
 import { ITaum } from "./interfaces/ITaum.sol";
 import { KeeperCompatibleInterface } from "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 
@@ -67,7 +67,7 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
   /// @notice Importing wrapped ether methods(Deposit-Withdraw and IERC20 methods)
   IWeth public weth;
   /// @notice Importing trade methods
-  ITradeComponents public trade;
+  ITradeFromUniswapV2 public trade;
   /// @notice Importing Taum contract interface as taum
   ITaum public taum;
 
@@ -119,7 +119,7 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
     taum = ITaum(_taumAddress);
     require(_tradeFromUniswapV2Address != address(0), "zero address");
     tradeFromUniswapV2Address = _tradeFromUniswapV2Address;
-    trade = ITradeComponents(tradeFromUniswapV2Address);
+    trade = ITradeFromUniswapV2(tradeFromUniswapV2Address);
     require(_protocolGradualAddress != address(0), "zero address");
     protocolGradualAddress = _protocolGradualAddress;
   }
@@ -196,6 +196,7 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
   }
 
   /// @notice Setting new minimum value
+  /// @dev Can be changed by governance decision
   /// @param '_minValue' The address of minimum value
   function setMinValue(uint256 _minValue)
     public
@@ -208,6 +209,7 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
   }
 
   /// @notice Setting value of limit
+  /// @dev Can be changed by governance decision
   /// @param _limitValue The limit value
   function setLimit(uint256 _limitValue) public onlyTimeLock returns (uint256) {
     require(_limitValue != 0, "not zero");
@@ -245,31 +247,31 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
   /// @notice TTFF creation start
   function ttffCreate() internal returns (bool) {
     address _ttfAddress = ttffPool.getTTFF();
-    ISetToken _ttf = ISetToken(_ttfAddress);
+    ISetToken _ttff = ISetToken(_ttfAddress);
     weth.transfer(
       tradeFromUniswapV2Address,
       weth.balanceOf(address(this)).div(2)
     );
-    uint256 _wethToIndex = weth.balanceOf(tradeFromUniswapV2Address);
+    uint256 _wethToTTFF = weth.balanceOf(tradeFromUniswapV2Address);
     uint256 _price;
     (
       address[] memory _components,
       uint256[] memory _values
-    ) = ethPoolTTFFAdapter.getRequiredComponents(_ttf, 1 * 10**18);
+    ) = ethPoolTTFFAdapter.getRequiredComponents(_ttff, 1 * 10**18);
     for (uint256 i = 0; i < _components.length; i++) {
       uint256 _preComponentPrice = price.getComponentPrice(_components[i]);
       _price = _price.add(_values[i].mul(_preComponentPrice).div(10**18));
     }
-    uint256 _quantity = (_wethToIndex.mul(10**18)).div(_price);
+    uint256 _quantity = (_wethToTTFF.mul(10**18)).div(_price);
     issueQuantity = _quantity.sub(
       (_quantity.mul(ttffPercentageForAmount)).div(100)
     );
     (
       address[] memory _components1,
       uint256[] memory _values1
-    ) = ethPoolTTFFAdapter.getRequiredComponents(_ttf, issueQuantity);
+    ) = ethPoolTTFFAdapter.getRequiredComponents(_ttff, issueQuantity);
     (, uint256[] memory _values2) = ethPoolTTFFAdapter.getRequiredComponents(
-      _ttf,
+      _ttff,
       _quantity
     );
     require(_values.length > 0, "zero values length");

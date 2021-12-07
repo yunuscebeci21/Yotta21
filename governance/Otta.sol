@@ -42,6 +42,8 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
   address public dividendAddress;
   /// @notice Address of LockedOtta contract
   address public lockedOtta;
+  /// @notice Address of Timelock contract
+  address public timelockAddress;
   /// @notice Tresury Vester 1 address 
   address public treasuryVester1;
   /// @notice Tresury Vester 2 address 
@@ -76,6 +78,8 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
   uint256 public dividendTime;
   /// @notice Daily cumulative locked otta fee
   uint256 public lockedOttaFeeBalance;
+  /// @notice Quantity to be discount
+  uint256 public discountQuantity;
   /// @notice Max mint token - Otta total supply
   uint256 public constant TOTAL_OTTA_AMOUNT = 88000000 * 10**18;
   /// @notice Transfer amount for Initial Finance
@@ -128,6 +132,7 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
     string memory symbol_,
     uint256 _interval,
     address _lockedOtta,
+    address _timelockAddress,
     address _treasuryVester1,
     address _treasuryVester2,
     address _treasuryVester3,
@@ -141,8 +146,11 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
     lastTimeStamp = block.timestamp;
     dividendDay = 28;
     lockDay = 2;
+    discountQuantity = 10000 * 10**18;
     require(_lockedOtta != address(0), "zero address");
     lockedOtta = _lockedOtta;
+    require(_timelockAddress != address(0), "zero address");
+    timelockAddress = _timelockAddress;
     require(_treasuryVester1 != address(0), "zero address");
     treasuryVester1 = _treasuryVester1;
     require(_treasuryVester2 != address(0), "zero address");
@@ -174,8 +182,8 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
     uint256 _ottaPrice = price.getOttaPrice();
     uint256 _tokens = (_ethAmount.mul(10**18)).div(_ottaPrice);
     uint256 _userAllowance = 0;
-    if (_tokens >= (1000 * 10**18)) {
-      _userAllowance = _ethAmount.mul(2).div(100);
+    if (_tokens >= (discountQuantity)) {
+      _userAllowance = _ethAmount.mul(8).div(100);
       payable(_userAddress).transfer(_userAllowance);
     }
     uint256 _lockedOttaFee = _tokens.mul(25).div(100);
@@ -291,6 +299,18 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
     dividend = IDividend(dividendAddress);
     emit DividendSetted(address(this), dividendAddress);
     return dividendAddress;
+  }
+
+  /// @notice Setting discount quantity
+  /// @dev Can be changed by governance decision
+  /// @param '_discountQuantity' The new discount quantity. 
+  function setDiscountQuantity(uint256 _discountQuantity)
+  public
+  returns(uint256)
+  {
+    require(msg.sender == timelockAddress, "only timelock");
+    discountQuantity = _discountQuantity;
+    return discountQuantity;
   }
 
   /// @return  The name of the token.

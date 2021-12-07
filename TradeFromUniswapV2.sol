@@ -24,8 +24,6 @@ contract TradeFromUniswapV2 is ITradeFromUniswapV2 {
   /* ================= State Variables ================= */
   /// @notice Address of EthereumPoolTTFFAdapter
   address public ethPoolTTFFAdapterAddress;
-  /// @notice Address of KeeperController
-  address public keeperController;
   /// @notice Address of uniswap swap router
   address public swapRouterAddress;
   /// @notice Address of owner
@@ -101,7 +99,7 @@ contract TradeFromUniswapV2 is ITradeFromUniswapV2 {
     uint256 _wethQuantity
   ) external override {
     require(
-      msg.sender == ethPoolTTFFAdapterAddress || msg.sender == keeperController,
+      msg.sender == ethPoolTTFFAdapterAddress,
       "Only Protocol"
     );
     address[] memory _path = new address[](2);
@@ -153,7 +151,7 @@ contract TradeFromUniswapV2 is ITradeFromUniswapV2 {
   /// @inheritdoc ITradeFromUniswapV2
   function residualWeth() external override {
     require(
-      msg.sender == ethPool || msg.sender == keeperController,
+      msg.sender == ethPool,
       "only ethPool"
     );
     weth.transfer(protocolVault, weth.balanceOf(address(this)));

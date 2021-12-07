@@ -6,7 +6,7 @@ import { IUniswapV2Adapter } from "./interfaces/IUniswapV2Adapter.sol";
 import { ITTFFPool } from "./interfaces/ITTFFPool.sol";
 import { IStreamingFeeModule } from "./tokenSet/IStreamingFeeModule.sol";
 import { ISetToken } from "@setprotocol/set-protocol-v2/contracts/interfaces/ISetToken.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
+import { KeeperCompatibleInterface } from "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 
 /// @title TTFPool
 /// @author Yotta21
