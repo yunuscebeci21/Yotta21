@@ -38,10 +38,7 @@ contract ProtocolVault is IProtocolVault {
   IEthereumPool public ethPool;
 
   /*============ Modifiers ================ */
-  /*
-   * Throws if the sender is not one of poolTokenAdapter, taumToken,
-   *  priceAddress or keeperControllerAddres
-   */
+  /// @notice Throws if the sender is not Taum or ProtocolGradual
   modifier onlyProtocolContracts() {
     require(
       (msg.sender == taumAddress ||
@@ -62,10 +59,10 @@ contract ProtocolVault is IProtocolVault {
   /*============ Constructor ================ */
   constructor(address _weth, address _taumAddress) {
     owner = msg.sender;
-    require(_weth != address(0), "zero address");
+    require(_weth != address(0), "Zero address");
     wethAddress = _weth;
     weth = IWeth(wethAddress);
-    require(_taumAddress != address(0), "zero address");
+    require(_taumAddress != address(0), "Zero address");
     taumAddress = _taumAddress;
   }
 
@@ -88,7 +85,7 @@ contract ProtocolVault is IProtocolVault {
 
   /// @inheritdoc IProtocolVault
   function feedPool(uint256 _amount) external override returns (bool) {
-    require(msg.sender == protocolGradualAddress, "Only Gradual Taum");
+    require(msg.sender == protocolGradualAddress, "Only Protocol Gradual");
     bool _successTransfer = weth.transfer(ethPoolAddress, _amount);
     require(_successTransfer, "Transfer failed.");
     ethPool.addLimit(_amount);
@@ -104,8 +101,8 @@ contract ProtocolVault is IProtocolVault {
     onlyOwner
     returns (address)
   {
-    require(!isProtocolGradualSetted, "Already Setted");
-    require(_protocolGradualAddress != address(0), "zero address");
+    require(!isProtocolGradualSetted, "Already setted");
+    require(_protocolGradualAddress != address(0), "Zero address");
     isProtocolGradualSetted = true;
     protocolGradualAddress = _protocolGradualAddress;
     emit ProtocolGradualSetted(protocolGradualAddress);
@@ -119,8 +116,8 @@ contract ProtocolVault is IProtocolVault {
     onlyOwner
     returns (address)
   {
-    require(!isEthPoolSetted, "Already Setted");
-    require(_ethPoolAddress != address(0), "zero address");
+    require(!isEthPoolSetted, "Already setted");
+    require(_ethPoolAddress != address(0), "Zero address");
     isEthPoolSetted = true;
     ethPoolAddress = _ethPoolAddress;
     ethPool = IEthereumPool(_ethPoolAddress);

@@ -66,9 +66,9 @@ contract Taum is
   IProtocolVault public protocolVault;
 
   /* ================ Modifier ================== */
-  /// @notice Throws if the sender is not owner or manager
+  /// @notice Throws if the sender is not owner
   modifier onlyOwner() {
-    require(msg.sender == ownerAddress, "Only Owner Manager");
+    require(msg.sender == ownerAddress, "Only Owner");
     _;
   }
 
@@ -83,7 +83,7 @@ contract Taum is
     _name = name_;
     _symbol = symbol_;
     _decimals = 18;
-    require(_dividendAddress != address(0), "zero address");
+    require(_dividendAddress != address(0), "Zero address");
     dividendAddress = _dividendAddress;
     interval = _interval;
     lastTimeStamp = block.timestamp;
@@ -106,7 +106,7 @@ contract Taum is
     (, , uint256 _taumPrice) = price.getTaumPrice(0);
     uint256 _ethAmount = _taumAmount.mul(_taumPrice).div(10**18);
     bool statusInvestment = protocolVault.withdraw(_userAddress, _ethAmount);
-    require(statusInvestment, "Insufficient Ether");
+    require(statusInvestment, "Insufficient ether");
     _burn(address(this), _taumAmount);
   }
 
@@ -118,7 +118,7 @@ contract Taum is
 
   /// @notice Chainlink Keeper method calls mintProtocol method
   function performUpkeep(bytes calldata performData) external override {
-    require((block.timestamp - lastTimeStamp) > interval, "not epoch");
+    require((block.timestamp - lastTimeStamp) > interval, "Not epoch");
     lastTimeStamp = block.timestamp;
     mintProtocolFee();
     performData;
@@ -140,7 +140,7 @@ contract Taum is
   /// @param _priceAddress The Price contract address.
   function setPrice(address _priceAddress) public onlyOwner returns (address) {
     require(!isPriceSetted, "Already setted");
-    require(_priceAddress != address(0), "zero address");
+    require(_priceAddress != address(0), "Zero address");
     isPriceSetted = true;
     price = IPrice(_priceAddress);
     emit PriceSetted(_priceAddress);
@@ -155,7 +155,7 @@ contract Taum is
     returns (address)
   {
     require(!isProtocolVaultSetted, "Already setted");
-    require(_protocolVaultAddress != address(0), "zero address");
+    require(_protocolVaultAddress != address(0), "Zero address");
     isProtocolVaultSetted = true;
     protocolVault = IProtocolVault(_protocolVaultAddress);
     emit ProtocolVaultSetted(_protocolVaultAddress);
@@ -170,7 +170,7 @@ contract Taum is
     returns (address)
   {
     require(!isEthPoolSetted, "Already setted");
-    require(_ethPoolAddress != address(0), "zero address");
+    require(_ethPoolAddress != address(0), "Zero address");
     isEthPoolSetted = true;
     ethPoolAddress = _ethPoolAddress;
     emit EthPoolSetted(ethPoolAddress);

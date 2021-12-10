@@ -9,18 +9,13 @@ interface ITradeFromUniswapV2{
     event ComponentSold(address componentAddress, uint256 quantity);
 
     /* ================= Functions ================= */
-    /*
-   * @notice: swaps wrapped ether to needed token on uniswapV2
-   */
+    /// @notice Swaps wrapped ether to needed token on uniswapV2
     function buyComponents(address _component, uint256 _value, uint256 _wethQuantity) external;
-    /*
-   * @notice: Burning index and selling components for weth
-   *          It sends weth to eth vault
-   */
+
+    /// @notice Burning ttff and selling components for weth
+    /// It sends weth to eth vault
     function redeemTTFF() external;
-     /*
-   * @notice: after buying transfers to residual weth vault
-   *
-   */
+
+    /// @notice After buying transfers to residual weth vault
     function residualWeth() external;
 }

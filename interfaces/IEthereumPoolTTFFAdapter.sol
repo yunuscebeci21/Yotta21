@@ -5,7 +5,7 @@ import {ISetToken} from "@setprotocol/set-protocol-v2/contracts/interfaces/ISetT
 
 interface IEthereumPoolTTFFAdapter {
     /*=============== Functions ========================*/
-    /// @notice Getter method of required components for create index
+    /// @notice Getter method of required components for create TTFF
     /// @param _setToken Address of TTFF. Must be inherit from ISetToken
     /// @param _quantity quantity of TTFF to issue 
     /// @return Array of component addresses and array of required quantity
@@ -23,6 +23,6 @@ interface IEthereumPoolTTFFAdapter {
         uint256 _wethQuantity
     ) external returns (bool);
     
-    /// @notice Minting ttff to ttff pool
+    /// @notice Minting TTFF to TTFF Pool
     function issueTTFF() external returns (bool);
 }

@@ -74,7 +74,7 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
   /*================== Modifiers =====================*/
   /// @notice Throws if the sender is not an owner
   modifier onlyOwner() {
-    require(msg.sender == owner, "Only Timelock");
+    require(msg.sender == owner, "Only Owner");
     _;
   }
 
@@ -97,30 +97,30 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
     address _protocolGradualAddress
   ) {
     owner = msg.sender;
-    require(_timelockAddress != address(0), "zero address");
+    require(_timelockAddress != address(0), "Zero address");
     timelockAddress = _timelockAddress;
     limit = 0;
     limitValue = 60 * 10 ** 18;
     ttffPercentageForAmount = 20; // Bu değerlerin okunmasına ihtiyaç var mı?
     protocolVaultPercentage = 25; //  ---
-    require(_weth != address(0), "zero address");
+    require(_weth != address(0), "Zero address");
     weth = IWeth(_weth);
-    require(_ttffPool != address(0), "zero address");
+    require(_ttffPool != address(0), "Zero address");
     ttffPoolAddress = _ttffPool;
     ttffPool = ITTFFPool(ttffPoolAddress);
-    require(_uniswapV2Adapter != address(0), "zero address");
+    require(_uniswapV2Adapter != address(0), "Zero address");
     uniswapV2AdapterAddress = _uniswapV2Adapter;
     uniswapV2Adapter = IUniswapV2Adapter(uniswapV2AdapterAddress);
-    require(_ethPoolTTFFAdapter != address(0), "zero address");
+    require(_ethPoolTTFFAdapter != address(0), "Zero address");
     ethPoolTTFFAdapter = IEthereumPoolTTFFAdapter(_ethPoolTTFFAdapter);
-    require(_protocolVault != address(0), "zero address");
+    require(_protocolVault != address(0), "Zero address");
     protocolVault = _protocolVault;
-    require(_taumAddress != address(0), "zero address");
+    require(_taumAddress != address(0), "Zero address");
     taum = ITaum(_taumAddress);
-    require(_tradeFromUniswapV2Address != address(0), "zero address");
+    require(_tradeFromUniswapV2Address != address(0), "Zero address");
     tradeFromUniswapV2Address = _tradeFromUniswapV2Address;
     trade = ITradeFromUniswapV2(tradeFromUniswapV2Address);
-    require(_protocolGradualAddress != address(0), "zero address");
+    require(_protocolGradualAddress != address(0), "Zero address");
     protocolGradualAddress = _protocolGradualAddress;
   }
 
@@ -130,14 +130,14 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
   /// @dev This function is calling tokenMint function
   /// @dev When user send ETH to pool it will mint Taum Token to user
   receive() external payable {
-    require(msg.value > minValue, "insufficient amount entry");
+    require(msg.value > minValue, "Insufficient amount entry");
     address _userAddress = msg.sender;
     uint256 _ethQuantity = msg.value;
     weth.deposit{ value: _ethQuantity }();
     uint256 _ethToVault = _ethQuantity.mul(protocolVaultPercentage).div(100);
     limit = limit.add(_ethQuantity).sub(_ethToVault);
     bool _successTransfer = weth.transfer(protocolVault, _ethToVault);
-    require(_successTransfer, "Transfer failed.");
+    require(_successTransfer, "Transfer failed");
     (, , uint256 _taumPrice) = price.getTaumPrice(_ethQuantity);
     uint256 _taumAmount = (_ethQuantity.mul(10**18)).div(_taumPrice);
     taum.tokenMint(_userAddress, _taumAmount);
@@ -147,7 +147,7 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
   /*============ External Functions ================ */
   /// @inheritdoc IEthereumPool
   function addLimit(uint256 _limit) external override {
-    require(msg.sender == protocolVault, "only protocol vault");
+    require(msg.sender == protocolVault, "Only Protocol Vault");
     limit = limit.add(_limit);
   }
 
@@ -162,7 +162,7 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
 
   /// @notice Chainlink Keeper method calls limitController method
   function performUpkeep(bytes calldata performData) external override {
-    require((limit >= limitValue), "not epoch");
+    require((limit >= limitValue), "Not epoch");
     limitController();
     performData;
   }
@@ -187,8 +187,8 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
   /// @notice Setting price contract address methods.
   /// @param '_priceAddress' The price contract address.
   function setPrice(address _priceAddress) public onlyOwner returns (address) {
-    require(!isPriceSetted, "Already Setted");
-    require(_priceAddress != address(0), "zero address");
+    require(!isPriceSetted, "Already setted");
+    require(_priceAddress != address(0), "Zero address");
     isPriceSetted = true;
     price = IPrice(_priceAddress);
     emit PriceSetted(_priceAddress);
@@ -212,7 +212,7 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
   /// @dev Can be changed by governance decision
   /// @param _limitValue The limit value
   function setLimit(uint256 _limitValue) public onlyTimeLock returns (uint256) {
-    require(_limitValue != 0, "not zero");
+    require(_limitValue != 0, "Not zero value");
     limitValue = _limitValue;
     emit LimitSetted(limitValue);
     return (limitValue);
@@ -224,15 +224,15 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
   function limitController() internal {
     limit = 0;
     bool successCreate = ttffCreate();
-    require(successCreate, "Fail index create");
+    require(successCreate, "Fail TTFF create");
     bool succesIssue = ethPoolTTFFAdapter.issueTTFF();
-    require(succesIssue, "Fail issue index");
+    require(succesIssue, "Fail issue TTFF");
     bool successSend = sendWETH();
-    require(successSend, "Fail send Eth");
+    require(successSend, "Fail send Weth");
     bool successGet = uniswapV2Adapter.bringTTFFsFromPool();
-    require(successGet, "Fail bring indexes from pool");
+    require(successGet, "Fail bring TTFFs from TTFF Pool");
     bool successAdd = uniswapV2Adapter.addLiquidity();
-    require(successAdd, "Fail add liquidity to uni");
+    require(successAdd, "Fail add liquidity to UniswapV2");
     emit TTFFCreated(ttffPool.getTTFF(), issueQuantity);
   }
 
@@ -274,7 +274,7 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
       _ttff,
       _quantity
     );
-    require(_values.length > 0, "zero values length");
+    require(_values.length > 0, "Zero values length");
     for (uint256 i = 0; i < _components.length; i++) {
       uint256 _componentPrice = price.getComponentPrice(_components1[i]);
       uint256 _wethToComponent = (_values2[i].mul(_componentPrice)).div(10**18);

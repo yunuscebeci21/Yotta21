@@ -65,7 +65,7 @@ contract TradeFromUniswapV2 is ITradeFromUniswapV2 {
   /* ================= Modifiers ================= */
   /// @notice Throws if the sender is not owner
   modifier onlyOwner() {
-    require(msg.sender == owner, "Only owner");
+    require(msg.sender == owner, "Only Owner");
     _;
   }
 
@@ -77,16 +77,16 @@ contract TradeFromUniswapV2 is ITradeFromUniswapV2 {
     address _issuanceModuleAddress
   ) {
     owner = msg.sender;
-    require(_ethPoolTTFFAdapter != address(0), "zero address");
+    require(_ethPoolTTFFAdapter != address(0), "Zero address");
     ethPoolTTFFAdapterAddress = _ethPoolTTFFAdapter;
     ethPoolTTFFAdapter = IEthereumPoolTTFFAdapter(ethPoolTTFFAdapter);
-    require(_wethAddress != address(0), "zero address");
+    require(_wethAddress != address(0), "Zero address");
     wethAddress = _wethAddress;
     weth = IWeth(wethAddress);
-    require(_swapRouterAddress != address(0), "zero address");
+    require(_swapRouterAddress != address(0), "Zero address");
     swapRouterAddress = _swapRouterAddress;
     swapRouter = IUniswapV2Router02(swapRouterAddress);
-    require(_issuanceModuleAddress != address(0), "zero address");
+    require(_issuanceModuleAddress != address(0), "Zero address");
     issuanceModule = IBasicIssuanceModule(_issuanceModuleAddress);
   }
 
@@ -134,7 +134,7 @@ contract TradeFromUniswapV2 is ITradeFromUniswapV2 {
 
   /// @inheritdoc ITradeFromUniswapV2
   function redeemTTFF() external override {
-    require(msg.sender == protocolGradualAddress, "only gradual taum");
+    require(msg.sender == protocolGradualAddress, "Only Protocol Gradual");
     address _ttffAddress = ttffPool.getTTFF();
     ttffPool.sendTTFF();
     ISetToken _set = ISetToken(_ttffAddress);
@@ -152,7 +152,7 @@ contract TradeFromUniswapV2 is ITradeFromUniswapV2 {
   function residualWeth() external override {
     require(
       msg.sender == ethPool,
-      "only ethPool"
+      "Only Ethereum Pool"
     );
     weth.transfer(protocolVault, weth.balanceOf(address(this)));
   }
@@ -166,7 +166,7 @@ contract TradeFromUniswapV2 is ITradeFromUniswapV2 {
     returns (address)
   {
     require(!isProtocolVaultSetted, "Already setted");
-    require(_protocolVault != address(0), "zero address");
+    require(_protocolVault != address(0), "Zero address");
     isProtocolVaultSetted = true;
     protocolVault = _protocolVault;
     emit ProtocolVaultSetted(protocolVault);
@@ -177,7 +177,7 @@ contract TradeFromUniswapV2 is ITradeFromUniswapV2 {
   /// @param _ethPool Address of ethereum pool
   function setEthPool(address _ethPool) public onlyOwner returns (address) {
     require(!isEthPoolSetted, "Already setted");
-    require(_ethPool != address(0), "zero address");
+    require(_ethPool != address(0), "Zero address");
     isEthPoolSetted = true;
     ethPool = _ethPool;
     emit EthPoolSetted(ethPool);
@@ -192,7 +192,7 @@ contract TradeFromUniswapV2 is ITradeFromUniswapV2 {
     returns (address)
   {
     require(!isProtocolGradualSetted, "Already setted");
-    require(_protocolGradual != address(0), "zero address");
+    require(_protocolGradual != address(0), "Zero address");
     isProtocolGradualSetted = true;
     protocolGradualAddress = _protocolGradual;
     emit ProtocolGradualSetted(protocolGradualAddress);
@@ -207,7 +207,7 @@ contract TradeFromUniswapV2 is ITradeFromUniswapV2 {
     returns (address)
   {
     require(!isTTFFPoolSetted, "Already setted");
-    require(_ttffPoolAddress != address(0), "zero address");
+    require(_ttffPoolAddress != address(0), "Zero address");
     isTTFFPoolSetted = true;
     ttffPool = ITTFFPool(_ttffPoolAddress);
     emit TTFFPoolSetted(_ttffPoolAddress);

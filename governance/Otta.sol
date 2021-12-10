@@ -147,17 +147,17 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
     dividendDay = 28;
     lockDay = 2;
     discountQuantity = 10000 * 10**18;
-    require(_lockedOtta != address(0), "zero address");
+    require(_lockedOtta != address(0), "Zero Address");
     lockedOtta = _lockedOtta;
-    require(_timelockAddress != address(0), "zero address");
+    require(_timelockAddress != address(0), "Zero Address");
     timelockAddress = _timelockAddress;
-    require(_treasuryVester1 != address(0), "zero address");
+    require(_treasuryVester1 != address(0), "Zero Address");
     treasuryVester1 = _treasuryVester1;
-    require(_treasuryVester2 != address(0), "zero address");
+    require(_treasuryVester2 != address(0), "Zero Address");
     treasuryVester2 = _treasuryVester2;
-    require(_treasuryVester3 != address(0), "zero address");
+    require(_treasuryVester3 != address(0), "Zero Address");
     treasuryVester3 = _treasuryVester3;
-    require(_treasuryVester4 != address(0), "zero address");
+    require(_treasuryVester4 != address(0), "Zero Address");
     treasuryVester4 = _treasuryVester4;
     _mint(address(this), TOTAL_OTTA_AMOUNT);
     _transfer(address(this), ownerAddress, INITIAL_FINANCE.mul(80).div(100));
@@ -172,12 +172,12 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
 
   /* ================ Functions ================== */
   /// @notice The function to be triggered when the otta token will buy
-  /// The amount of ethereum sent is calculated based on the otta price.
-  /// Otta token is transferred to the caller and the protocol.
+  /// @dev The amount of ethereum sent is calculated based on the otta price.
+  /// @dev Otta token is transferred to the caller and the protocol.
   receive() external payable {
     uint256 _ethAmount = msg.value;
-    require(msg.sender != address(0), "zero address");
-    require(_ethAmount != 0, "insufficient eth amount");
+    require(msg.sender != address(0), "Zero address");
+    require(_ethAmount != 0, "Insufficient eth amount");
     address _userAddress = msg.sender;
     uint256 _ottaPrice = price.getOttaPrice();
     uint256 _tokens = (_ethAmount.mul(10**18)).div(_ottaPrice);
@@ -275,7 +275,7 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
   /// @return The price contract address.
   function setPrice(address _priceAddress) public onlyOwner returns (address) {
     require(!isPriceSetted, "Already setted");
-    require(_priceAddress != address(0), "zero address");
+    require(_priceAddress != address(0), "Zero address");
     isPriceSetted = true;
     price = IPrice(_priceAddress);
     emit PriceSetted(address(this), _priceAddress);
@@ -293,7 +293,7 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
     returns (address)
   {
     require(!isDividendSetted, "Already setted");
-    require(_dividendAddress != address(0), "zero address");
+    require(_dividendAddress != address(0), "Zero address");
     isDividendSetted = true;
     dividendAddress = _dividendAddress;
     dividend = IDividend(dividendAddress);
@@ -308,7 +308,7 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
   public
   returns(uint256)
   {
-    require(msg.sender == timelockAddress, "only timelock");
+    require(msg.sender == timelockAddress, "Only Timelock");
     discountQuantity = _discountQuantity;
     return discountQuantity;
   }

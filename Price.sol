@@ -30,8 +30,6 @@ contract Price is IPrice {
   address public ottaUniPool;
   /// @notice Address of ttff univ2
   address public ttffUniPool;
-  /// @notice Address of link univ2
-  address public linkTokenUniPool;
   /// @notice Address of taum
   address public taum;
   /// @notice Address of ttff
@@ -76,18 +74,18 @@ contract Price is IPrice {
     address[] memory _components
   ) {
     owner = msg.sender;
-    require(_weth != address(0), "zero address");
+    require(_weth != address(0), "Zero address");
     weth = IWeth(_weth);
     wethAddress = _weth;
-    require(_ttffUniPool != address(0), "zero address");
+    require(_ttffUniPool != address(0), "Zero address");
     ttffUniPool = _ttffUniPool;
-    require(_ottaUniPool != address(0), "zero address");
+    require(_ottaUniPool != address(0), "Zero address");
     ottaUniPool = _ottaUniPool;
-    require(_taum != address(0), "zero address");
+    require(_taum != address(0), "Zero address");
     taum = _taum;
-    require(_ttff != address(0), "zero address");
+    require(_ttff != address(0), "Zero address");
     ttff = _ttff;
-    require(_components.length > 0, "zero components");
+    require(_components.length > 0, "Zero components array");
     components = _components;
   }
 
@@ -192,7 +190,7 @@ contract Price is IPrice {
     address[] calldata _uniPools
   ) public onlyOwner returns (address[] calldata, address[] calldata) {
     require(!isUniPoolsSetted, "Already setted");
-    require(_components.length == _uniPools.length, "not equals");
+    require(_components.length == _uniPools.length, "Not equals");
     isUniPoolsSetted = true;
     for (uint256 i = 0; i < _uniPools.length; i++) {
       componentsUniPools[_components[i]] = _uniPools[i];
@@ -209,7 +207,7 @@ contract Price is IPrice {
     returns (address)
   {
     require(!isProtocolVaultSetted, "Already setted");
-    require(_protocolVaultAddress != address(0), "zero address");
+    require(_protocolVaultAddress != address(0), "Zero address");
     isProtocolVaultSetted = true;
     protocolVaultAddress = _protocolVaultAddress;
     emit ProtocolVaultSetted(protocolVaultAddress);
@@ -224,7 +222,7 @@ contract Price is IPrice {
     returns (address)
   {
     require(!isTTFFPoolSetted, "Already setted");
-    require(_ttffPoolAddress != address(0), "zero address");
+    require(_ttffPoolAddress != address(0), "Zero address");
     isTTFFPoolSetted = true;
     ttffPoolAddress = _ttffPoolAddress;
     emit TTFFPoolSetted(ttffPoolAddress);
@@ -239,7 +237,7 @@ contract Price is IPrice {
     returns (address)
   {
     require(!isEthPoolSetted, "Already setted");
-    require(_ethPoolAddress != address(0), "zero address");
+    require(_ethPoolAddress != address(0), "Zero address");
     isEthPoolSetted = true;
     ethPoolAddress = _ethPoolAddress;
     emit EthPoolSetted(ethPoolAddress);
@@ -254,7 +252,7 @@ contract Price is IPrice {
     returns (address)
   {
     require(!isUniswapV2AdapterSetted, "Already setted");
-    require(_uniswapV2Adapter != address(0), "zero address");
+    require(_uniswapV2Adapter != address(0), "Zero address");
     isUniswapV2AdapterSetted = true;
     uniswapV2Adapter = _uniswapV2Adapter;
     emit UniswapV2AdapterSetted(uniswapV2Adapter);

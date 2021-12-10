@@ -99,18 +99,18 @@ contract UniswapV2Adapter is IUniswapV2Adapter {
   function approveTokens() external onlyOwner {
     ERC20 _weth = ERC20(wethAddress);
     bool success = _weth.approve(router02Address, MAX_INT);
-    require(success, "weth approve error");
+    require(success, "Weth approve error");
     ERC20 _ttff = ERC20(ttff);
     bool success2 = _ttff.approve(router02Address, MAX_INT);
-    require(success2, "Index approve error");
+    require(success2, "TTFF approve error");
     ERC20 _ttffPool = ERC20(ttffUniV2Address);
     bool success3 = _ttffPool.approve(router02Address, MAX_INT);
-    require(success3, "Index approve error");
+    require(success3, "TTFF UniV2 approve error");
   }
 
   /// @inheritdoc IUniswapV2Adapter
   function bringTTFFsFromPool() external override returns (bool) {
-    require(msg.sender == ethPoolAddress, "only ethereum pool");
+    require(msg.sender == ethPoolAddress, "Only Ethereum Pool");
     ttffPool.sendTTFF();
     return true;
   }
@@ -180,7 +180,7 @@ contract UniswapV2Adapter is IUniswapV2Adapter {
 
   /// @inheritdoc IUniswapV2Adapter
   function removeLiquidity(uint256 _percent) external override returns (bool) {
-    require(msg.sender == protocolGradual, "Only gradualTaum");
+    require(msg.sender == protocolGradual, "Only Protocol Gradual");
     ERC20 _ttff = ERC20(ttff);
     uint256 _totalSupply = ttffUniV2.totalSupply();
     uint256 _liquidity = ttffUniV2.balanceOf(address(this)).mul(_percent).div(
@@ -234,7 +234,7 @@ contract UniswapV2Adapter is IUniswapV2Adapter {
     returns (address)
   {
     require(!isTTFFPoolSetted, "Already setted");
-    require(_ttffPoolAddress != address(0), "zero address");
+    require(_ttffPoolAddress != address(0), "Zero address");
     isTTFFPoolSetted = true;
     ttffPoolAdress = _ttffPoolAddress;
     ttffPool = ITTFFPool(ttffPoolAdress);
@@ -246,7 +246,7 @@ contract UniswapV2Adapter is IUniswapV2Adapter {
   /// @param _priceAddress The price contract address.
   function setPrice(address _priceAddress) public onlyOwner returns (address) {
     require(!isPriceSetted, "Already setted");
-    require(_priceAddress != address(0), "zero address");
+    require(_priceAddress != address(0), "Zero address");
     isPriceSetted = true;
     price = IPrice(_priceAddress);
     emit PriceSetted(_priceAddress);
@@ -261,7 +261,7 @@ contract UniswapV2Adapter is IUniswapV2Adapter {
     returns (address)
   {
     require(!isProtocolVaultSetted, "Already setted");
-    require(_protocolVaultAddress != address(0), "zero address");
+    require(_protocolVaultAddress != address(0), "Zero address");
     isProtocolVaultSetted = true;
     protocolVaultAddress = _protocolVaultAddress;
     emit ProtocolVaultSetted(protocolVaultAddress);
@@ -276,7 +276,7 @@ contract UniswapV2Adapter is IUniswapV2Adapter {
     returns (address)
   {
     require(!isEthPoolSetted, "Already setted");
-    require(_ethPoolAddress != address(0), "zero address");
+    require(_ethPoolAddress != address(0), "Zero address");
     isEthPoolSetted = true;
     ethPoolAddress = _ethPoolAddress;
     emit EthPoolSetted(ethPoolAddress);
@@ -291,7 +291,7 @@ contract UniswapV2Adapter is IUniswapV2Adapter {
     returns (address)
   {
     require(!isProtocolGradualSetted, "Already setted");
-    require(_protocolGradualAddress != address(0), "zero address");
+    require(_protocolGradualAddress != address(0), "Zero address");
     isProtocolGradualSetted = true;
     protocolGradual = _protocolGradualAddress;
     emit ProtocolGradualSetted(protocolGradual);

@@ -5,14 +5,14 @@ interface IEthereumPool {
     /*=============== Events ========================*/
     /// @notice An event thats emitted when Taum token mint
     event MintTaumTokenToUser(address _userAddress, uint256 _taumQuantity);
-    /// @notice An event thats emitted when sending for Weth to Liqudity 
+    /// @notice An event thats emitted when sending for Weth to UniswapV2Adapter Contract
     event SendWETHtoLiquidity(address _recipient, uint256 _amount);
     /// @notice An event thats emitted when TTFF created
     event TTFFCreated(address _ttff, uint256 _amount);
 
     /*=============== Functions ========================*/
-    /// @notice It is for protocol gradual contract.
-    /// @dev Sends Weth to Vault, if needs.
+    /// @notice It is for Protocol Gradual contract.
+    /// @dev Sends Weth to Protocol Vault, if needs.
     /// @dev It is triggered by the Protocol Gradual contract.
     function feedVault(uint256 _amount) external returns (bool);
 

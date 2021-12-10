@@ -59,16 +59,16 @@ contract EthereumPoolTTFFAdapter is IEthereumPoolTTFFAdapter {
 
   /// @notice Throws if the sender is not eth pool
   modifier onlyEthPool() {
-    require(msg.sender == ethPoolAddress, "Only Ether Pool");
+    require(msg.sender == ethPoolAddress, "Only Ethereum Pool");
     _;
   }
 
   /* ================= Constructor ================= */
   constructor(address _wethAddress, address _issuanceModuleAddress) {
     owner = msg.sender;
-    require(_wethAddress != address(0), "zero address");
+    require(_wethAddress != address(0), "Zero address");
     wethAddress = _wethAddress;
-    require(_issuanceModuleAddress != address(0), "zero address");
+    require(_issuanceModuleAddress != address(0), "Zero address");
     issuanceModuleAddress = _issuanceModuleAddress;
     issuanceModule = IBasicIssuanceModule(issuanceModuleAddress);
   }
@@ -126,7 +126,7 @@ contract EthereumPoolTTFFAdapter is IEthereumPoolTTFFAdapter {
     returns (address)
   {
     require(!isTradeFromUniswapV2, "Already setted");
-    require(_tradeFromUniswapV2Address != address(0), "zero address");
+    require(_tradeFromUniswapV2Address != address(0), "Zero address");
     isTradeFromUniswapV2 = true;
     tradeFromUniswapV2Address = _tradeFromUniswapV2Address;
     trade = ITradeFromUniswapV2(tradeFromUniswapV2Address);
@@ -142,7 +142,7 @@ contract EthereumPoolTTFFAdapter is IEthereumPoolTTFFAdapter {
     returns (address)
   {
     require(!isTtffPoolSetted, "Already setted");
-    require(_ttffPoolAddress != address(0), "zero address");
+    require(_ttffPoolAddress != address(0), "Zero address");
     isTtffPoolSetted = true;
     ttffPoolAddress = _ttffPoolAddress;
     ttffPool = ITTFFPool(ttffPoolAddress);
@@ -157,8 +157,8 @@ contract EthereumPoolTTFFAdapter is IEthereumPoolTTFFAdapter {
     onlyOwner
     returns (address)
   {
-    require(!isEthPoolSetted, "Already Setted");
-    require(_ethPoolAddress != address(0), "zero address");
+    require(!isEthPoolSetted, "Already setted");
+    require(_ethPoolAddress != address(0), "Zero address");
     isEthPoolSetted = true;
     ethPoolAddress = _ethPoolAddress;
     ethPool = IEthereumPool(ethPoolAddress);

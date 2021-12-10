@@ -30,7 +30,7 @@ contract LockedOtta {
   function setOtta(address _ottaAddress) public returns (address) {
     require(msg.sender == owner, "Only Owner");
     require(!isOttaSetted, "Already setted");
-    require(_ottaAddress != address(0), "zero address");
+    require(_ottaAddress != address(0), "Zero address");
     isOttaSetted = true;
     ottaToken = ERC20(_ottaAddress);
     emit OttaSetted(_ottaAddress);

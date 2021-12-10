@@ -102,18 +102,18 @@ contract ProtocolGradual is KeeperCompatibleInterface {
     address _ttff
   ) {
     owner = msg.sender;
-    require(_protocolVaultAddress != address(0), "zero address");
+    require(_protocolVaultAddress != address(0), "Zero address");
     protocolVaultAddress = _protocolVaultAddress;
     protocolVault = IProtocolVault(protocolVaultAddress);
-    require(_ttffPoolAddress != address(0), "zero address");
+    require(_ttffPoolAddress != address(0), "Zero address");
     ttffPoolAddress = _ttffPoolAddress;
     ttffPool = ITTFFPool(ttffPoolAddress);
-    require(_uniswapV2AdapterAddress != address(0), "zero address");
+    require(_uniswapV2AdapterAddress != address(0), "Zero address");
     uniswapV2AdapterAddress = _uniswapV2AdapterAddress;
     uniV2Adapter = IUniswapV2Adapter(uniswapV2AdapterAddress);
-    require(_tradeAddress != address(0), "zero address");
+    require(_tradeAddress != address(0), "Zero address");
     trade = ITradeFromUniswapV2(_tradeAddress);
-    require(_wethAddress != address(0), "zero address");
+    require(_wethAddress != address(0), "Zero address");
     wethAddress = _wethAddress;
     weth = IWeth(wethAddress);
     require(_ttffUniPool != address(0), "zero address");
@@ -165,7 +165,7 @@ contract ProtocolGradual is KeeperCompatibleInterface {
     returns (address)
   {
     require(!isEthPoolSetted, "Already setted");
-    require(_ethPoolAddress != address(0), "zero address");
+    require(_ethPoolAddress != address(0), "Zero address");
     isEthPoolSetted = true;
     ethPoolAddress = _ethPoolAddress;
     ethPool = IEthereumPool(ethPoolAddress);
@@ -177,7 +177,7 @@ contract ProtocolGradual is KeeperCompatibleInterface {
   /// @param _priceAddress The price contract address
   function setPrice(address _priceAddress) public onlyOwner returns (address) {
     require(!isPriceSetted, "Already setted");
-    require(_priceAddress != address(0), "zero address");
+    require(_priceAddress != address(0), "Zero address");
     isPriceSetted = true;
     price = IPrice(_priceAddress);
     emit PriceSetted(_priceAddress);
@@ -200,7 +200,7 @@ contract ProtocolGradual is KeeperCompatibleInterface {
       } else {
         uint256 _amount = weth.balanceOf(ethPoolAddress);
         bool _success = ethPool.feedVault(_amount);
-        require(_success, "Transfer to vault failed");
+        require(_success, "Transfer to Protocol Vault failed");
       }
     } else if (_percent > value2 && _percent <= value3) {
       if (_ttffUni.balanceOf(uniswapV2AdapterAddress) != 0) {
@@ -210,7 +210,7 @@ contract ProtocolGradual is KeeperCompatibleInterface {
       } else {
         uint256 _amount = weth.balanceOf(ethPoolAddress);
         bool _success = ethPool.feedVault(_amount);
-        require(_success, "Transfer to vault failed");
+        require(_success, "Transfer to Protocol Vault failed");
       }
     } else if (_percent > value4) {
       processMoreThanValue4();
@@ -226,7 +226,7 @@ contract ProtocolGradual is KeeperCompatibleInterface {
     trade.redeemTTFF();
     uint256 _amount = weth.balanceOf(ethPoolAddress);
     bool _success = ethPool.feedVault(_amount);
-    require(_success, "Transfer to vault failed");
+    require(_success, "Transfer to Protocol Vault failed");
     emit TransferToVault(ethPoolAddress, protocolVaultAddress, _amount);
     return true;
   }
@@ -240,7 +240,7 @@ contract ProtocolGradual is KeeperCompatibleInterface {
     trade.redeemTTFF();
     uint256 _amount = weth.balanceOf(ethPoolAddress);
     bool _success = ethPool.feedVault(_amount);
-    require(_success, "Transfer to vault failed");
+    require(_success, "Transfer to Protocol Vault failed");
     emit TransferToVault(ethPoolAddress, protocolVaultAddress, _amount);
     return true;
   }
@@ -252,7 +252,7 @@ contract ProtocolGradual is KeeperCompatibleInterface {
     uint256 _newPercent = _percent.sub(protocolVaultPercentage);
     uint256 _amount = _totalBalance.mul(_newPercent).div(10**20);
     bool _success = protocolVault.feedPool(_amount);
-    require(_success, "Transfer to pool failed");
+    require(_success, "Transfer to Ethereum Pool failed");
     emit TransferToETHPool(protocolVaultAddress, ethPoolAddress, _amount);
     return true;
   }

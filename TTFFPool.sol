@@ -38,13 +38,13 @@ contract TTFFPool is ITTFFPool, KeeperCompatibleInterface {
   ) {
     owner = msg.sender;
     interval = _interval;
-    require(_uniswapV2Adapter != address(0), "zero address");
+    require(_uniswapV2Adapter != address(0), "Zero address");
     uniswapV2AdapterAddress = _uniswapV2Adapter;
-    require(_tradeFromUniswapV2Address != address(0), "zero address");
+    require(_tradeFromUniswapV2Address != address(0), "Zero address");
     tradeFromUniswapV2Address = _tradeFromUniswapV2Address;
-    require(_ttffAddress != address(0), "zero address");
+    require(_ttffAddress != address(0), "Zero address");
     ttffAddress = _ttffAddress;
-    require(_streamingFeeModule != address(0), "zero address");
+    require(_streamingFeeModule != address(0), "Zero address");
     streamingFee = IStreamingFeeModule(_streamingFeeModule);
   }
 
@@ -55,11 +55,11 @@ contract TTFFPool is ITTFFPool, KeeperCompatibleInterface {
     require(
       (msg.sender == uniswapV2AdapterAddress ||
         msg.sender == tradeFromUniswapV2Address),
-      "only protocol"
+      "Only Protocol"
     );
     ERC20 _ttff = ERC20(ttffAddress);
     bool success = _ttff.transfer(msg.sender, _ttff.balanceOf(address(this)));
-    require(success, "Transfer Failed");
+    require(success, "Transfer failed");
     emit TTFFSent(true);
   }
 
@@ -70,7 +70,7 @@ contract TTFFPool is ITTFFPool, KeeperCompatibleInterface {
 
   /// @notice Chainlink Keeper method calls unlocked method
   function performUpkeep(bytes calldata performData) external override {
-    require((block.timestamp - lastTimeStamp) > interval, "not epoch");
+    require((block.timestamp - lastTimeStamp) > interval, "Not epoch");
     lastTimeStamp = block.timestamp;
     collectStreamingFee();
     performData;
