@@ -27,10 +27,14 @@ contract Dividend is IDividend {
   uint256 public totalEthDividend;
   /// @notice Max integer value
   uint256 public constant MAX_INT = 2**256 - 1;
+  /// @notice Period counter for dividend
+  uint256 public periodCounter;
   /// @notice State of sets in this contract
   bool public isLockingEpoch;
   /// @notice Holds relation of address and locked otta token amount
   mapping(address => uint256) private locked;
+  /// @notice Means the dividend share right of the user within the period
+  mapping(address => mapping(uint256 => bool)) public receiveDividend;
   /// @notice Importing Otta token methods
   ERC20 public ottaToken;
 
@@ -40,13 +44,13 @@ contract Dividend is IDividend {
     address _ottaTokenAddress,
     address _lockedOtta
   ) {
-    require(_manager != address(0), "Zero address");
+    require(_manager != address(0), "zero address");
     manager = _manager;
     isLockingEpoch = false;
-    require(_ottaTokenAddress != address(0), "Zero address");
+    require(_ottaTokenAddress != address(0), "zero address");
     ottaTokenAddress = _ottaTokenAddress;
     ottaToken = ERC20(ottaTokenAddress);
-    require(_lockedOtta != address(0), "Zero address");
+    require(_lockedOtta != address(0), "zero address");
     lockedOtta = _lockedOtta;
   }
 
@@ -64,11 +68,13 @@ contract Dividend is IDividend {
     isLockingEpoch = epoch;
     if (isLockingEpoch) {
       totalEthDividend = address(this).balance;
+
       uint256 _amount = ottaToken.balanceOf(lockedOtta);
       locked[manager] = _amount;
       uint256 _ottaAmount = ottaToken.balanceOf(address(this));
       totalLockedOtta = _ottaAmount.add(_amount);
       walletCounter += 1;
+      periodCounter += 1;
       emit OttaTokenLocked(manager, _amount);
     }
     return (isLockingEpoch, totalEthDividend);
@@ -77,7 +83,7 @@ contract Dividend is IDividend {
   /// @notice recives otta token to lock
   /// @param amount The otta token amount to lock
   function lockOtta(uint256 amount) external {
-    require(isLockingEpoch, "Not epoch");
+    require(isLockingEpoch, "Not Epoch");
     locked[msg.sender] = locked[msg.sender].add(amount);
     totalLockedOtta = totalLockedOtta.add(amount);
     walletCounter += 1;
@@ -87,28 +93,38 @@ contract Dividend is IDividend {
   }
 
   /// @notice calculates dividend amount of user
-  /// @dev Transfers locked Otta token to user
   /// @dev Transfers dividends to the user 
   function getDividend() external {
-    require(!isLockingEpoch, "Not dividend epoch");
+    require(!isLockingEpoch, "Not Dividend Epoch");
     require(locked[msg.sender] != 0, "Locked Otta not found");
+    require(!receiveDividend[msg.sender][periodCounter], "Already received");
     address payable _userAddress = payable(msg.sender);
-    require(_userAddress != address(0), "Zero address");
+    require(_userAddress != address(0), "zero address");
+    receiveDividend[msg.sender][periodCounter] = true;
     uint256 _ottaQuantity = locked[msg.sender];
-    locked[msg.sender] = 0;
-    walletCounter -= 1;
     uint256 _percentage = (_ottaQuantity.mul(10**18)).div(totalLockedOtta);
     uint256 _dividendQuantity = (_percentage.mul(totalEthDividend)).div(10**18);
     _userAddress.transfer(_dividendQuantity);
+  }
+
+  /// @notice Transfers locked Otta token to user
+  function getOttaToken() external {
+    require(!isLockingEpoch, "Not Dividend Epoch");
+    require(locked[msg.sender] != 0, "Locked Otta not found");
+    address payable _userAddress = payable(msg.sender);
+    require(_userAddress != address(0), "zero address");
+    uint256 _ottaQuantity = locked[msg.sender];
+    locked[msg.sender] = 0;
+    walletCounter -= 1;
     bool success = ottaToken.transfer(msg.sender, _ottaQuantity);
-    require(success, "Transfer failed");
+    require(success, "transfer failed");
   }
 
   /// @inheritdoc IDividend
   function getDividendRequesting() external override {
     require(msg.sender == ottaTokenAddress, "Only Otta");
     address payable _userAddress = payable(manager);
-    require(_userAddress != address(0), "Zero address");
+    require(_userAddress != address(0), "zero address");
     uint256 _ottaQuantity = locked[manager];
     locked[manager] = 0;
     walletCounter -= 1;

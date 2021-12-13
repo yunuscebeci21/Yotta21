@@ -83,7 +83,7 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
   /// @notice Max mint token - Otta total supply
   uint256 public constant TOTAL_OTTA_AMOUNT = 88000000 * 10**18;
   /// @notice Transfer amount for Initial Finance
-  uint256 public constant INITIAL_FINANCE = 6160000 * 10**18;
+  uint256 public constant INITIAL_FINANCE = 3240000 * 10**18;
   /// @notice Transfer amount for Treasury Vester
   uint256 public constant TREASURY_VESTER = 17600000 * 10**18;
   /// @notice The EIP-712 typehash for the contract's domain
