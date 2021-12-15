@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IUniswapV2Adapter } from "./interfaces/IUniswapV2Adapter.sol";
 import { ITTFFPool } from "./interfaces/ITTFFPool.sol";
-import { IStreamingFeeModule } from "./tokenSet/IStreamingFeeModule.sol";
+import { IStreamingFeeModule } from "./external/IStreamingFeeModule.sol";
 import { ISetToken } from "@setprotocol/set-protocol-v2/contracts/interfaces/ISetToken.sol";
 import { KeeperCompatibleInterface } from "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 

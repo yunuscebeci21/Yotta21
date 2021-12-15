@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { IDividend } from "./interfaces/IDividend.sol";
-import { IWeth } from "./interfaces/IWeth.sol";
 
 /// @title Dividend
 /// @author Yotta21
@@ -94,14 +93,14 @@ contract Dividend is IDividend {
 
   /// @notice calculates dividend amount of user
   /// @dev Transfers dividends to the user 
-  function getDividend() external {
+  function getDividend(address _account) external {
     require(!isLockingEpoch, "Not Dividend Epoch");
-    require(locked[msg.sender] != 0, "Locked Otta not found");
-    require(!receiveDividend[msg.sender][periodCounter], "Already received");
-    address payable _userAddress = payable(msg.sender);
+    require(locked[_account] != 0, "Locked Otta not found");
+    require(!receiveDividend[_account][periodCounter], "Already received");
+    address payable _userAddress = payable(_account);
     require(_userAddress != address(0), "zero address");
-    receiveDividend[msg.sender][periodCounter] = true;
-    uint256 _ottaQuantity = locked[msg.sender];
+    receiveDividend[_account][periodCounter] = true;
+    uint256 _ottaQuantity = locked[_account];
     uint256 _percentage = (_ottaQuantity.mul(10**18)).div(totalLockedOtta);
     uint256 _dividendQuantity = (_percentage.mul(totalEthDividend)).div(10**18);
     _userAddress.transfer(_dividendQuantity);

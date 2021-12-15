@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { IUniswapPool } from "./interfaces/IUniswapPool.sol";
+import { IUniswapV2Pool } from "./external/IUniswapV2Pool.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { IWeth } from "./interfaces/IWeth.sol";
+import { IWeth } from "./external/IWeth.sol";
 import { IPrice } from "./interfaces/IPrice.sol";
 
 contract Price is IPrice {
@@ -99,7 +99,7 @@ contract Price is IPrice {
     returns (uint256 _componentPrice)
   {
     address _componentPool = componentsUniPools[_componentAddress];
-    IUniswapPool _component = IUniswapPool(_componentPool);
+    IUniswapV2Pool _component = IUniswapV2Pool(_componentPool);
     address _token = _component.token0();
     if (_token == wethAddress) {
       (uint256 _reserveWeth, uint256 _reserveComponent, ) = _component
@@ -114,7 +114,7 @@ contract Price is IPrice {
 
   /// @inheritdoc IPrice
   function getOttaPrice() external view override returns (uint256 _ottaPrice) {
-    IUniswapPool _otta = IUniswapPool(ottaUniPool);
+    IUniswapV2Pool _otta = IUniswapV2Pool(ottaUniPool);
     address _token = _otta.token0();
     if (_token == wethAddress) {
       (uint256 _reserveWeth, uint256 _reserveOtta, ) = _otta.getReserves();
@@ -127,7 +127,7 @@ contract Price is IPrice {
 
   /// @inheritdoc IPrice
   function getTtffPrice() external view override returns (uint256 _ttffPrice) {
-    IUniswapPool _ttff = IUniswapPool(ttffUniPool);
+    IUniswapV2Pool _ttff = IUniswapV2Pool(ttffUniPool);
     address _token = _ttff.token0();
     if (_token == wethAddress) {
       (uint256 _reserveWeth, uint256 _reserveTtf, ) = _ttff.getReserves();
@@ -157,7 +157,7 @@ contract Price is IPrice {
       .balanceOf(ttffPoolAddress)
       .mul(this.getTtffPrice())
       .div(10**18);
-    IUniswapPool _ttffPool = IUniswapPool(ttffUniPool);
+    IUniswapV2Pool _ttffPool = IUniswapV2Pool(ttffUniPool);
     uint256 _percent = _ttffPool.balanceOf(uniswapV2Adapter).mul(10**20).div(
       _ttffPool.totalSupply()
     );

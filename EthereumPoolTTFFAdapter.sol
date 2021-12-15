@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import { ISetToken } from "@setprotocol/set-protocol-v2/contracts/interfaces/ISetToken.sol";
-import { IBasicIssuanceModule } from "./tokenSet/IBasicIssuanceModule.sol";
+import { IBasicIssuanceModule } from "./external/IBasicIssuanceModule.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IEthereumPoolTTFFAdapter } from "./interfaces/IEthereumPoolTTFFAdapter.sol";
 import { ITradeFromUniswapV2 } from "./interfaces/ITradeFromUniswapV2.sol";

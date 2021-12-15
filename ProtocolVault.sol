@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { IWeth } from "./interfaces/IWeth.sol";
+import { IWeth } from "./external/IWeth.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IProtocolVault } from "./interfaces/IProtocolVault.sol";
 import { IEthereumPool } from "./interfaces/IEthereumPool.sol";

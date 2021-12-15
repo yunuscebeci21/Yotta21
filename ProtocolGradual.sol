@@ -9,9 +9,9 @@ import { ITTFFPool } from "./interfaces/ITTFFPool.sol";
 import { IProtocolVault } from "./interfaces/IProtocolVault.sol";
 import { IUniswapV2Adapter } from "./interfaces/IUniswapV2Adapter.sol";
 import { ITradeFromUniswapV2 } from "./interfaces/ITradeFromUniswapV2.sol";
-import { IWeth } from "./interfaces/IWeth.sol";
+import { IWeth } from "./external/IWeth.sol";
 import { IPrice } from "./interfaces/IPrice.sol";
-import { IUniswapPool } from "./interfaces/IUniswapPool.sol";
+import { IUniswapV2Pool } from "./external/IUniswapV2Pool.sol";
 import { KeeperCompatibleInterface } from "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 
 contract ProtocolGradual is KeeperCompatibleInterface {
@@ -188,7 +188,7 @@ contract ProtocolGradual is KeeperCompatibleInterface {
   /// @notice The range of percent is determined and the related internal function is triggered
   function vaultPercentOfTotal() internal {
     (, uint256 _percent, ) = price.getTaumPrice(0);
-    IUniswapPool _ttffUni = IUniswapPool(ttffUniPool);
+    IUniswapV2Pool _ttffUni = IUniswapV2Pool(ttffUniPool);
     ERC20 _ttff = ERC20(ttff);
     uint256 _ttffAmount = _ttff.balanceOf(ttffPoolAddress);
 

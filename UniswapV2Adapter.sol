@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { IUniswapV2Router02 } from "./uniswap/IUniswapV2Router02.sol";
+import { IUniswapV2Router02 } from "./external/IUniswapV2Router02.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { ITTFFPool } from "./interfaces/ITTFFPool.sol";
-import { IUniswapPool } from "./interfaces/IUniswapPool.sol";
+import { IUniswapV2Pool } from "./external/IUniswapV2Pool.sol";
 import { IUniswapV2Adapter } from "./interfaces/IUniswapV2Adapter.sol";
 import { IPrice } from "./interfaces/IPrice.sol";
-import { IWeth } from "./interfaces/IWeth.sol";
+import { IWeth } from "./external/IWeth.sol";
 
 contract UniswapV2Adapter is IUniswapV2Adapter {
   using SafeMath for uint256;
@@ -59,7 +59,7 @@ contract UniswapV2Adapter is IUniswapV2Adapter {
   /// @notice Importing TTFFPool contract interface
   ITTFFPool public ttffPool;
   /// @notice Importing UniswapPool interface
-  IUniswapPool public ttffUniV2;
+  IUniswapV2Pool public ttffUniV2;
   /// @notice Importing Price contract interface
   IPrice public price;
   /// @notice Importing Weth contract interface
@@ -89,7 +89,7 @@ contract UniswapV2Adapter is IUniswapV2Adapter {
     require(_ttff != address(0), "zero address");
     ttff = _ttff;
     require(_uniswapTtfPool != address(0), "zero address");
-    ttffUniV2 = IUniswapPool(_uniswapTtfPool);
+    ttffUniV2 = IUniswapV2Pool(_uniswapTtfPool);
     ttffUniV2Address = _uniswapTtfPool;
   }
 
