@@ -5,7 +5,8 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IUniswapV2Adapter } from "./interfaces/IUniswapV2Adapter.sol";
 import { ITTFFPool } from "./interfaces/ITTFFPool.sol";
 import { IStreamingFeeModule } from "./external/IStreamingFeeModule.sol";
-import { ISetToken } from "@setprotocol/set-protocol-v2/contracts/interfaces/ISetToken.sol";
+import { ISetToken } from "./external/ISetToken.sol";
+import { ITradeModule } from "./external/ITradeModule.sol";
 import { KeeperCompatibleInterface } from "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 
 /// @title TTFPool
@@ -21,12 +22,16 @@ contract TTFFPool is ITTFFPool, KeeperCompatibleInterface {
   address public owner;
   /// @notice Addresses  of ttff token
   address public ttffAddress;
+  /// @notice Timelock address
+  address public timelockAddress;
   /// @notice Chainlink keeper call time
   uint256 public immutable interval;
   /// @notice Chainlink keeper trigger last time
   uint256 public lastTimeStamp;
-  /// @notice Accrue streaming fee from tokenSet
-  IStreamingFeeModule private streamingFee;
+  /// @notice Accrue streaming fee from set protocol
+  IStreamingFeeModule public streamingFee;
+  /// @notice Accrue streaming fee from set protocol
+  ITradeModule public tradeModule;
 
   /*===================== Constructor ======================*/
   constructor(
@@ -34,10 +39,13 @@ contract TTFFPool is ITTFFPool, KeeperCompatibleInterface {
     address _uniswapV2Adapter,
     address _tradeFromUniswapV2Address,
     address _ttffAddress,
-    address _streamingFeeModule
+    address _streamingFeeModule,
+    address _tradeModule,
+    address _timelockAddress
   ) {
     owner = msg.sender;
     interval = _interval;
+    lastTimeStamp = block.timestamp;
     require(_uniswapV2Adapter != address(0), "Zero address");
     uniswapV2AdapterAddress = _uniswapV2Adapter;
     require(_tradeFromUniswapV2Address != address(0), "Zero address");
@@ -46,6 +54,10 @@ contract TTFFPool is ITTFFPool, KeeperCompatibleInterface {
     ttffAddress = _ttffAddress;
     require(_streamingFeeModule != address(0), "Zero address");
     streamingFee = IStreamingFeeModule(_streamingFeeModule);
+    require(_tradeModule != address(0), "zero address");
+    tradeModule = ITradeModule(_tradeModule);
+    require(_timelockAddress != address(0), "zero address");
+    timelockAddress = _timelockAddress;
   }
 
   /* ================== Functions ================== */
@@ -67,6 +79,25 @@ contract TTFFPool is ITTFFPool, KeeperCompatibleInterface {
   function getTTFF() external view override returns (address) {
     return ttffAddress;
   }
+
+  /// @notice Rebalancing for TTFF
+  function rebalancing(address _setToken,
+        string memory _exchangeName,
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
+        uint256 _minReceiveQuantity,
+        bytes memory _data) public {
+    require(msg.sender == timelockAddress, "Only Timelock");
+    ISetToken _ttff = ISetToken(_setToken);
+    tradeModule.trade(_ttff,
+                      _exchangeName,
+                      _sendToken,
+                      _sendQuantity,
+                      _receiveToken,
+                      _minReceiveQuantity,
+                      _data);
+    }
 
   /// @notice Chainlink Keeper method calls unlocked method
   function performUpkeep(bytes calldata performData) external override {

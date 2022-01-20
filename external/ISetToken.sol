@@ -12,10 +12,17 @@
     limitations under the License.
 */
 pragma solidity ^0.8.0;
-import {ISetToken} from "../external/ISetToken.sol";
+pragma experimental "ABIEncoderV2";
 
-interface IStreamingFeeModule{
-    /* ================= Functions ================= */
-    /// @notice Gets TTFF fee with StreamingFee Module.
-    function accrueFee(ISetToken _setToken) external;
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+/**
+ * @title ISetToken
+ * @author Set Protocol
+ *
+ * Interface for operating with SetTokens.
+ */
+interface ISetToken is IERC20 {
+    /* ============ Functions ============ */
+    function getComponents() external view returns(address[] memory);
 }

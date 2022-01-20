@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { ISetToken } from "@setprotocol/set-protocol-v2/contracts/interfaces/ISetToken.sol";
+import { ISetToken } from "./external/ISetToken.sol";
 import { IBasicIssuanceModule } from "./external/IBasicIssuanceModule.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IEthereumPoolTTFFAdapter } from "./interfaces/IEthereumPoolTTFFAdapter.sol";
@@ -87,14 +87,14 @@ contract EthereumPoolTTFFAdapter is IEthereumPoolTTFFAdapter {
   }
   
   /// @inheritdoc IEthereumPoolTTFFAdapter
-  function getRequiredComponents(ISetToken _ttf, uint256 _quantity)
+  function getRequiredComponents(ISetToken _ttff, uint256 _quantity)
     external
     override
     onlyEthPool
     returns (address[] memory, uint256[] memory)
   {
     (address[] memory _components, uint256[] memory _values) = issuanceModule
-      .getRequiredComponentUnitsForIssue(_ttf, _quantity);
+      .getRequiredComponentUnitsForIssue(_ttff, _quantity);
     return (_components, _values);
   }
    

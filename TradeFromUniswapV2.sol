@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import { IUniswapV2Router02 } from "./external/IUniswapV2Router02.sol";
 import { IEthereumPoolTTFFAdapter } from "./interfaces/IEthereumPoolTTFFAdapter.sol";
 import { ITradeFromUniswapV2 } from "./interfaces/ITradeFromUniswapV2.sol";
-import { ISetToken } from "@setprotocol/set-protocol-v2/contracts/interfaces/ISetToken.sol";
+import { ISetToken } from "./external/ISetToken.sol";
 import { ITTFFPool } from "./interfaces/ITTFFPool.sol";
 import { IWeth } from "./external/IWeth.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";

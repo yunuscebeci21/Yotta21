@@ -93,7 +93,7 @@ contract Dividend is IDividend {
 
   /// @notice calculates dividend amount of user
   /// @dev Transfers dividends to the user 
-  function getDividend(address _account) external {
+  function getDividend(address _account) external override {
     require(!isLockingEpoch, "Not Dividend Epoch");
     require(locked[_account] != 0, "Locked Otta not found");
     require(!receiveDividend[_account][periodCounter], "Already received");
@@ -106,16 +106,21 @@ contract Dividend is IDividend {
     _userAddress.transfer(_dividendQuantity);
   }
 
-  /// @notice Transfers locked Otta token to user
-  function getOttaToken() external {
+  /// @notice Transfers locked Otta token and dividend to user
+  function getDividendAndOttaToken(address _account) external override {
     require(!isLockingEpoch, "Not Dividend Epoch");
-    require(locked[msg.sender] != 0, "Locked Otta not found");
-    address payable _userAddress = payable(msg.sender);
+    require(locked[_account] != 0, "Locked Otta not found");
+    require(!receiveDividend[_account][periodCounter], "Already received");
+    address payable _userAddress = payable(_account);
     require(_userAddress != address(0), "zero address");
-    uint256 _ottaQuantity = locked[msg.sender];
-    locked[msg.sender] = 0;
+    receiveDividend[_account][periodCounter] = true;
+    uint256 _ottaQuantity = locked[_account];
+    locked[_account] = 0;
     walletCounter -= 1;
-    bool success = ottaToken.transfer(msg.sender, _ottaQuantity);
+    uint256 _percentage = (_ottaQuantity.mul(10**18)).div(totalLockedOtta);
+    uint256 _dividendQuantity = (_percentage.mul(totalEthDividend)).div(10**18);
+    _userAddress.transfer(_dividendQuantity);
+    bool success = ottaToken.transfer(_account, _ottaQuantity);
     require(success, "transfer failed");
   }
 
@@ -130,6 +135,16 @@ contract Dividend is IDividend {
     uint256 _percentage = (_ottaQuantity.mul(10**18)).div(totalLockedOtta);
     uint256 _dividendQuantity = (_percentage.mul(totalEthDividend)).div(10**18);
     _userAddress.transfer(_dividendQuantity);
+  }
+  
+  /// @inheritdoc IDividend
+  function getPeriod()
+     external 
+     view 
+     override
+     returns (uint256)
+  {
+    return periodCounter;
   }
 
   /* =================== Public Functions ====================== */

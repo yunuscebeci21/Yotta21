@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 interface ITTFFPool {
     /* ================= Events ================= */
-    /// @notice An event thats emitted when buying Components
+    /// @notice An event thats emitted when sending to UniswapV2Adapter
     event TTFFSent(bool _state);
     
     /* ================= Functions ================= */

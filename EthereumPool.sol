@@ -5,7 +5,7 @@ import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { IUniswapV2Adapter } from "./interfaces/IUniswapV2Adapter.sol";
 import { IWeth } from "./external/IWeth.sol";
 import { IEthereumPoolTTFFAdapter } from "./interfaces/IEthereumPoolTTFFAdapter.sol";
-import { ISetToken } from "@setprotocol/set-protocol-v2/contracts/interfaces/ISetToken.sol";
+import { ISetToken } from "./external/ISetToken.sol";
 import { IEthereumPool } from "./interfaces/IEthereumPool.sol";
 import { IPrice } from "./interfaces/IPrice.sol";
 import { ITTFFPool } from "./interfaces/ITTFFPool.sol";
@@ -100,7 +100,8 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
     require(_timelockAddress != address(0), "Zero address");
     timelockAddress = _timelockAddress;
     limit = 0;
-    limitValue = 60 * 10 ** 18;
+    limitValue = 0.2 * 10 ** 18;
+    minValue = 0.005 * 10 ** 18;
     ttffPercentageForAmount = 20; // Bu değerlerin okunmasına ihtiyaç var mı?
     protocolVaultPercentage = 25; //  ---
     require(_weth != address(0), "Zero address");

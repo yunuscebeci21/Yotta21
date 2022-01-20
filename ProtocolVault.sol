@@ -71,15 +71,15 @@ contract ProtocolVault is IProtocolVault {
 
   /*================= External Functions=================*/
   /// @inheritdoc IProtocolVault
-  function withdraw(address payable _userAddress, uint256 _withdrawAmount)
+  function withdraw(address payable _account, uint256 _withdrawAmount)
     external
     override
     onlyProtocolContracts
     returns (bool state)
   {
     weth.withdraw(_withdrawAmount);
-    _userAddress.transfer(_withdrawAmount);
-    emit WithDrawtoUser(_userAddress, _withdrawAmount);
+    _account.transfer(_withdrawAmount);
+    emit WithdrawToAccount(_account, _withdrawAmount);
     return (true);
   }
 

@@ -92,7 +92,7 @@ contract Taum is
 
   /*================== Functions =====================*/
   /*================== External Functions =====================*/
-  /// @notice Function called when otta token sale is made to the system
+  /// @notice Function called when taum token sale is made to the system
   /// @param _taumAmount Quantity of taum token. It must be wei type (10**18)
   function receiver(uint256 _taumAmount) external {
     address payable _userAddress = payable(msg.sender);
@@ -111,9 +111,9 @@ contract Taum is
   }
 
   /// @inheritdoc ITaum
-  function tokenMint(address recipient, uint256 amount) external override {
+  function tokenMint(address _recipient, uint256 _amount) external override {
     require(msg.sender == ethPoolAddress, "Only Ethereum Pool");
-    _mint(recipient, amount);
+    _mint(_recipient, _amount);
   }
 
   /// @notice Chainlink Keeper method calls mintProtocol method

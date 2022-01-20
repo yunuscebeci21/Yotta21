@@ -6,6 +6,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { IDividend } from "../interfaces/IDividend.sol";
+import { IVCADVTeam } from "../interfaces/IVCADVTeam.sol";
 import { IPrice } from "../interfaces/IPrice.sol";
 import { KeeperCompatibleInterface } from "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 
@@ -20,6 +21,8 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
   event PriceSetted(address _otta, address _priceAddress);
   /// @notice An event thats emitted when dividend contract address setting
   event DividendSetted(address _otta, address _dividendAddress);
+  /// @notice An event thats emitted when VCADVTeam contract address setting
+  event VCADVTeamAddressSetted(address _otta, address _vcADVTeamAddress);
   /// @notice An event thats emitted when an account buying Otta
   event OttaTokenPurchased(address indexed _resipient, uint256 _ottaAmount);
   /// @notice An event thats emitted when an account changes its delegate
@@ -40,6 +43,8 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
   address public ownerAddress;
   /// @notice Address of dividend contract
   address public dividendAddress;
+  /// @notice Address of vcADVTeamAddress contract
+  address public vcADVTeamAddress;
   /// @notice Address of LockedOtta contract
   address public lockedOtta;
   /// @notice Address of Timelock contract
@@ -97,6 +102,7 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
   /// @notice Set status of Otta contract
   bool public isPriceSetted;
   bool public isDividendSetted;
+  bool public isVCADVTeamSetted;
   /// @notice Allowance amounts on behalf of others
   mapping(address => mapping(address => uint256)) private _allowances;
   /// @notice Official record of token balances for each account
@@ -116,6 +122,8 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
   }
   /// @notice Importing dividend contract interface as dividend
   IDividend public dividend;
+  /// @notice Importing vcADVTeam contract interface as vcADVTeam
+  IVCADVTeam public vcADVTeam;
   /// @notice Importing price contract interface as price
   IPrice public price;
 
@@ -144,6 +152,7 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
     _decimals = 18;
     interval = _interval;
     lastTimeStamp = block.timestamp;
+    dividendTime = block.timestamp;
     dividendDay = 28;
     lockDay = 2;
     discountQuantity = 10000 * 10**18;
@@ -299,6 +308,25 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
     dividend = IDividend(dividendAddress);
     emit DividendSetted(address(this), dividendAddress);
     return dividendAddress;
+  }
+
+  /// @notice Setting VCADVTeam contract address
+  /// @dev Since this contract is deployed before the dividend contract, the dividend contract address is set.
+  /// @dev Param and return same address
+  /// @param '_vcADVTeamAddress' The dividend contract address.
+  /// @return The VCADVTeam contract address.
+  function setVCADVTeam(address _vcADVTeamAddress)
+    public
+    onlyOwner
+    returns (address)
+  {
+    require(!isVCADVTeamSetted, "Already setted");
+    require(_vcADVTeamAddress != address(0), "Zero address");
+    isVCADVTeamSetted = true;
+    vcADVTeamAddress = _vcADVTeamAddress;
+    vcADVTeam = IVCADVTeam(vcADVTeamAddress);
+    emit VCADVTeamAddressSetted(address(this), vcADVTeamAddress);
+    return vcADVTeamAddress;
   }
 
   /// @notice Setting discount quantity
@@ -477,28 +505,36 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
   function unlocked() internal {
     if (lockedSupply == 0) {
       dividendDayCounter += 1;
-      if (dividendDayCounter == dividendDay) {
+      if (dividendDayCounter == dividendDay) {  
         dividend.setEpoch(true);
       }
-      if (dividendDayCounter == lockDay + dividendDay) {
+      if (dividendDayCounter == lockDay) {
+        vcADVTeam.setEpochForVCDividend(false);
+      }
+      if (dividendDayCounter == lockDay + dividendDay) { 
         dividend.setEpoch(false);
         dividendDayCounter = 0;
         dividendTime = block.timestamp;
         dividend.getDividendRequesting();
+        vcADVTeam.setEpochForVCDividend(true);
       }
     } else {
       lockedSupply = lockedSupply.sub(11500 * 10**18);
       unlockedSupply = unlockedSupply.add(9200 * 10**18);
       lockedOttaFeeBalance = lockedOttaFeeBalance.add(2300 * 10**18);
       dividendDayCounter += 1;
-      if (dividendDayCounter == dividendDay) {
+      if (dividendDayCounter == dividendDay) {  
         dividend.setEpoch(true);
       }
-      if (dividendDayCounter == lockDay + dividendDay) {
+      if (dividendDayCounter == lockDay) {
+        vcADVTeam.setEpochForVCDividend(false);
+      }
+      if (dividendDayCounter == lockDay + dividendDay) { 
         dividend.setEpoch(false);
         dividendDayCounter = 0;
         dividendTime = block.timestamp;
         dividend.getDividendRequesting();
+        vcADVTeam.setEpochForVCDividend(true);
       }
     }
   }

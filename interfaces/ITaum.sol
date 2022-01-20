@@ -5,5 +5,5 @@ interface ITaum {
    /*============ Functions ================ */
    /// @notice Function to call before _mint functions
    /// @dev Can only call EthereumPool contract
-   function tokenMint(address recipient, uint256 amount) external;
+   function tokenMint(address _recipient, uint256 _amount) external;
 }

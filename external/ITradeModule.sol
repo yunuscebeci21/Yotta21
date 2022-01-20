@@ -12,10 +12,17 @@
     limitations under the License.
 */
 pragma solidity ^0.8.0;
-import {ISetToken} from "../external/ISetToken.sol";
+import {ISetToken} from "./ISetToken.sol";
 
-interface IStreamingFeeModule{
-    /* ================= Functions ================= */
-    /// @notice Gets TTFF fee with StreamingFee Module.
-    function accrueFee(ISetToken _setToken) external;
+interface ITradeModule{
+    function trade(
+        ISetToken _setToken,
+        string memory _exchangeName,
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
+        uint256 _minReceiveQuantity,
+        bytes memory _data
+    )
+        external;
 }

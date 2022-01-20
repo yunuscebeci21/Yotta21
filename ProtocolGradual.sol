@@ -221,7 +221,7 @@ contract ProtocolGradual is KeeperCompatibleInterface {
   /// @dev removeLiquidity() : removePercentage1%(25%) of LP Token is withdrawn with fees
   /// @dev redeemTTFF() : Existing ttffs are reedem
   /// @dev feedVault() : 100% of Ethereum Pool is transferred to Vault
-  function processValue1ToValue2() internal returns (bool status) {
+  function processValue1ToValue2() internal returns (bool) {
     uniV2Adapter.removeLiquidity(removePercentage1);
     trade.redeemTTFF();
     uint256 _amount = weth.balanceOf(ethPoolAddress);
