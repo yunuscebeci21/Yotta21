@@ -11,16 +11,16 @@ contract GovernorBravoDelegate is
   string public constant name = "Yotta21 Governor Bravo";
 
   /// @notice The minimum setable proposal threshold
-  uint256 public constant MIN_PROPOSAL_THRESHOLD = 1000000e18; // 1,000,000 Otta
+  uint256 public constant MIN_PROPOSAL_THRESHOLD = 10e18; // % Otta
 
   /// @notice The maximum setable proposal threshold
-  uint256 public constant MAX_PROPOSAL_THRESHOLD = 10000000e18; //10,000,000 Otta
+  uint256 public constant MAX_PROPOSAL_THRESHOLD = 40e18; // % Otta
 
   /// @notice The minimum setable voting period
-  uint256 public constant MIN_VOTING_PERIOD = 5760; // About 24 hours
+  uint256 public constant MIN_VOTING_PERIOD = 900; // About 24 hours
 
   /// @notice The max setable voting period
-  uint256 public constant MAX_VOTING_PERIOD = 80640; // About 2 weeks
+  uint256 public constant MAX_VOTING_PERIOD = 1600; // About 2 weeks
 
   /// @notice The min setable voting delay
   uint256 public constant MIN_VOTING_DELAY = 1;
@@ -29,7 +29,7 @@ contract GovernorBravoDelegate is
   uint256 public constant MAX_VOTING_DELAY = 40320; // About 1 week
 
   /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
-  uint256 public constant quorumVotes = 40000000e18; // 40,000,000 = 4% of Otta
+  uint256 public constant quorumVotes = 80e18; // 7% of Otta
 
   /// @notice The maximum number of actions that can be included in a proposal
   uint256 public constant proposalMaxOperations = 10; // 10 actions

@@ -4,8 +4,8 @@ pragma solidity ^0.8.0;
 interface IDividend {
   /* ================= Events ================= */
   /// @notice An event thats emitted when Otta locked for Manager contract
-  event OttaTokenLocked(address _userAddress, uint256 _amount);
-
+  event OttaTokenLocked(address _lockedOtta, address _lockedOttaBroker, address _lockedOttaMesh, uint256 _amount);
+  event LockedOtta(address _userAddress, uint256 _amount);
   /* ================= Functions ================= */
   /// @notice Setting locking epoch
   /// @dev Function that adjusts the entry and exit in the dividend period
@@ -19,6 +19,8 @@ interface IDividend {
   /// @dev Ether transfer to the manager contract takes place in proportion 
   /// to the amount written to the map for the manager contract.
   function getDividendRequesting() external;
+
+  function getMeshDividendRequesting() external;
 
    /// @notice Returns period counter for dividend
   function getPeriod() external view returns (uint256);

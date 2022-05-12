@@ -6,23 +6,35 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { IDividend } from "../interfaces/IDividend.sol";
-import { IVCADVTeam } from "../interfaces/IVCADVTeam.sol";
+import { ITeam } from "../interfaces/ITeam.sol";
+import { IDelegator } from "../interfaces/IDelegator.sol";
+import { ICoordinator } from "../interfaces/ICoordinator.sol";
+import { IGroups } from "../interfaces/IGroups.sol";
 import { IPrice } from "../interfaces/IPrice.sol";
 import { KeeperCompatibleInterface } from "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
+import { ICurrentVotes } from "../interfaces/ICurrentVotes.sol";
+import { IOtta } from "../interfaces/IOtta.sol";
+import { IBroker } from "../interfaces/IBroker.sol";
+import { IMeshNFTDividend } from "../interfaces/IMeshNFTDividend.sol";
 
 /// @title Otta
 /// @author Yotta21
 /// @notice Otta token ownership provides delegate right and dividend right.
-contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
+contract Otta is
+  Context,
+  IERC20,
+  IERC20Metadata,
+  KeeperCompatibleInterface,
+  ICurrentVotes,
+  IOtta
+{
   using SafeMath for uint256;
 
   /* ================ Events ================== */
-  /// @notice An event thats emitted when price contract address setting
-  event PriceSetted(address _otta, address _priceAddress);
-  /// @notice An event thats emitted when dividend contract address setting
-  event DividendSetted(address _otta, address _dividendAddress);
-  /// @notice An event thats emitted when VCADVTeam contract address setting
-  event VCADVTeamAddressSetted(address _otta, address _vcADVTeamAddress);
+  /// @notice An event thats emitted when contract addresses setting
+  event ContractAddressesSetted(address[] _contractAddresses);
+  //
+  event OttaTransfered(address[] _contractAddresses);
   /// @notice An event thats emitted when an account buying Otta
   event OttaTokenPurchased(address indexed _resipient, uint256 _ottaAmount);
   /// @notice An event thats emitted when an account changes its delegate
@@ -44,19 +56,12 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
   /// @notice Address of dividend contract
   address public dividendAddress;
   /// @notice Address of vcADVTeamAddress contract
-  address public vcADVTeamAddress;
-  /// @notice Address of LockedOtta contract
-  address public lockedOtta;
-  /// @notice Address of Timelock contract
-  address public timelockAddress;
-  /// @notice Tresury Vester 1 address 
-  address public treasuryVester1;
-  /// @notice Tresury Vester 2 address 
-  address public treasuryVester2;
-  /// @notice Tresury Vester 3 address 
-  address public treasuryVester3;
-  /// @notice Tresury Vester 4 address 
-  address public treasuryVester4;
+  address public teamAddress;
+  /// @notice Address of LockedOtta contracts
+  address public lockedOttaTeam;
+  address public lockedOttaBroker;
+  address public lockedOttaMeshNFT;
+  address public lockedOttaMesh;
   /// @notice Otta token name
   string private _name;
   /// @notice Otta token symbol
@@ -81,16 +86,19 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
   uint256 public lockDay;
   /// @notice Time when the Dividend counter is 0
   uint256 public dividendTime;
-  /// @notice Daily cumulative locked otta fee
-  uint256 public lockedOttaFeeBalance;
+  /// @notice Daily cumulative locked otta fees
+  uint256 public lockedOttaTeamFeeBalance;
+  uint256 public lockedOttaBrokerFeeBalance;
+  uint256 public lockedOttaMeshNFTFeeBalance;
+  uint256 public lockedOttaMeshFeeBalance;
   /// @notice Quantity to be discount
-  uint256 public discountQuantity;
+  uint256 public immutable discountQuantity;
   /// @notice Max mint token - Otta total supply
-  uint256 public constant TOTAL_OTTA_AMOUNT = 88000000 * 10**18;
+  uint256 public constant TOTAL_OTTA_AMOUNT = 88000000*10**18;
   /// @notice Transfer amount for Initial Finance
-  uint256 public constant INITIAL_FINANCE = 3240000 * 10**18;
+  uint256 public constant INITIAL_FINANCE = 3543680*10**18; // 3000000 - 250000(ico) + 500000(airdrop)
   /// @notice Transfer amount for Treasury Vester
-  uint256 public constant TREASURY_VESTER = 17600000 * 10**18;
+  uint256 public constant TREASURY_VESTER = 17600000*10**18;
   /// @notice The EIP-712 typehash for the contract's domain
   bytes32 public constant DOMAIN_TYPEHASH =
     keccak256(
@@ -99,10 +107,9 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
   /// @notice The EIP-712 typehash for the delegation struct used by the contract
   bytes32 public constant DELEGATION_TYPEHASH =
     keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
-  /// @notice Set status of Otta contract
-  bool public isPriceSetted;
-  bool public isDividendSetted;
-  bool public isVCADVTeamSetted;
+  /// @notice Set status of contract addresses
+  bool public isContractAddressesSetted;
+  bool public isTransfered;
   /// @notice Allowance amounts on behalf of others
   mapping(address => mapping(address => uint256)) private _allowances;
   /// @notice Official record of token balances for each account
@@ -116,6 +123,10 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
   /// @notice The number of checkpoints for each account
   mapping(address => uint32) public numCheckpoints;
   /// @notice A checkpoint for marking number of votes from a given block
+
+  ///
+  mapping(address => bool) public isDiscountOtta;
+
   struct Checkpoint {
     uint32 fromBlock;
     uint256 votes;
@@ -123,59 +134,37 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
   /// @notice Importing dividend contract interface as dividend
   IDividend public dividend;
   /// @notice Importing vcADVTeam contract interface as vcADVTeam
-  IVCADVTeam public vcADVTeam;
+  ITeam public teamDividend;
+  IBroker public brokerDividend;
+  IMeshNFTDividend public meshNFTDividend;
+  IDelegator public delegatorDividend;
+  ICoordinator public coordinatorDividend;
+  IGroups public groupsDividend;
+
   /// @notice Importing price contract interface as price
   IPrice public price;
-
-  /*================== Modifiers =====================*/
-  /// @notice Throws if the sender is not owner or manager
-  modifier onlyOwner() {
-    require(msg.sender == ownerAddress, "Only Owner or Manager");
-    _;
-  }
 
   /*=============== Constructor ========================*/
   constructor(
     string memory name_,
-    string memory symbol_,
-    uint256 _interval,
-    address _lockedOtta,
-    address _timelockAddress,
-    address _treasuryVester1,
-    address _treasuryVester2,
-    address _treasuryVester3,
-    address _treasuryVester4
+    string memory symbol_
   ) {
     ownerAddress = msg.sender;
     _name = name_;
     _symbol = symbol_;
     _decimals = 18;
-    interval = _interval;
+    interval = 100;
     lastTimeStamp = block.timestamp;
     dividendTime = block.timestamp;
-    dividendDay = 28;
-    lockDay = 2;
+    dividendDay = 84;
+    lockDay = 6;
     discountQuantity = 10000 * 10**18;
-    require(_lockedOtta != address(0), "Zero Address");
-    lockedOtta = _lockedOtta;
-    require(_timelockAddress != address(0), "Zero Address");
-    timelockAddress = _timelockAddress;
-    require(_treasuryVester1 != address(0), "Zero Address");
-    treasuryVester1 = _treasuryVester1;
-    require(_treasuryVester2 != address(0), "Zero Address");
-    treasuryVester2 = _treasuryVester2;
-    require(_treasuryVester3 != address(0), "Zero Address");
-    treasuryVester3 = _treasuryVester3;
-    require(_treasuryVester4 != address(0), "Zero Address");
-    treasuryVester4 = _treasuryVester4;
     _mint(address(this), TOTAL_OTTA_AMOUNT);
-    _transfer(address(this), ownerAddress, INITIAL_FINANCE.mul(80).div(100));
-    _transfer(address(this), ownerAddress, INITIAL_FINANCE.mul(4).div(100)); // vc address
-    _transfer(address(this), lockedOtta, INITIAL_FINANCE.mul(16).div(100));
-    _transfer(address(this), treasuryVester1, TREASURY_VESTER.mul(10).div(100));
-    _transfer(address(this), treasuryVester2, TREASURY_VESTER.mul(20).div(100));
-    _transfer(address(this), treasuryVester3, TREASURY_VESTER.mul(30).div(100));
-    _transfer(address(this), treasuryVester4, TREASURY_VESTER.mul(40).div(100));
+    _transfer(
+      address(this),
+      ownerAddress,
+      INITIAL_FINANCE.sub(3000000 * 10**18)
+    );
     lockedSupply = _totalSupply.sub(INITIAL_FINANCE.add(TREASURY_VESTER));
   }
 
@@ -192,13 +181,20 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
     uint256 _tokens = (_ethAmount.mul(10**18)).div(_ottaPrice);
     uint256 _userAllowance = 0;
     if (_tokens >= (discountQuantity)) {
-      _userAllowance = _ethAmount.mul(8).div(100);
+      // değiştirilebilir olmayacak - sabit indirim miktarı - 400
+      // map yapısında indirimli alan wallet ı tut
+      isDiscountOtta[_userAddress] = true;
+      _userAllowance = _ethAmount.mul(12).div(100);
       payable(_userAddress).transfer(_userAllowance);
     }
-    uint256 _lockedOttaFee = _tokens.mul(25).div(100);
+    uint256 _lockedOttaFee = _tokens.mul(8).div(100); // team
+    uint256 _lockedOttaBrokerFee = _tokens.mul(8).div(100); // broker
+    uint256 _lockedOttaMeshNFTFee = _tokens.mul(8).div(100); // mesh nft
+    uint256 _lockedOttaMeshFee = _tokens.mul(35).div(100); // mesh
+    // 3. transfer gerçekleşicek (kilitlenicek contract ve kar payı contract ı)  %8
     payable(dividendAddress).transfer(_ethAmount.sub(_userAllowance));
     _transferFromContract(msg.sender, _tokens);
-    _transferLockedOttaFee(_lockedOttaFee);
+    _transferOttaFee(_lockedOttaFee, _lockedOttaBrokerFee, _lockedOttaMeshNFTFee, _lockedOttaMeshFee);
     emit OttaTokenPurchased(msg.sender, _tokens);
   }
 
@@ -221,11 +217,20 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
     upkeepNeeded = (block.timestamp - lastTimeStamp) > interval;
     performData = checkData;
   }
-  
+
+  function getIsDiscount(address _account) external view returns (bool) {
+    return isDiscountOtta[_account];
+  }
+
   /// @notice Gets the current votes balance for `account`
   /// @param account The address to get votes balance
   /// @return The number of current votes for `account`
-  function getCurrentVotes(address account) external view returns (uint256) {
+  function getCurrentVotes(address account)
+    external
+    view
+    override
+    returns (uint256)
+  {
     uint32 nCheckpoints = numCheckpoints[account];
     return nCheckpoints > 0 ? checkpoints[account][nCheckpoints - 1].votes : 0;
   }
@@ -277,68 +282,61 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
   }
 
   /*================== Public Functions =====================*/
-  /// @notice Setting price contract address
+  /// @notice Setting contract addresses
   /// @dev Since this contract is deployed before the price contract, the price contract address is set.
-  /// @dev Param and return same address
-  /// @param '_priceAddress' The price contract address.
-  /// @return The price contract address.
-  function setPrice(address _priceAddress) public onlyOwner returns (address) {
-    require(!isPriceSetted, "Already setted");
-    require(_priceAddress != address(0), "Zero address");
-    isPriceSetted = true;
-    price = IPrice(_priceAddress);
-    emit PriceSetted(address(this), _priceAddress);
-    return _priceAddress;
+  /// @dev Addresses to be used in the contract are set
+  function setContractAddresses(address[] calldata _contractAddresses)
+    external
+  {
+    require(msg.sender == ownerAddress, "only owner");
+    /*require(
+      _contractAddresses[0] != address(0) &&
+        _contractAddresses[1] != address(0) &&
+        _contractAddresses[2] != address(0),
+      "zero addresses"
+    );*/
+    require(!isContractAddressesSetted, "Already setted");
+    isContractAddressesSetted = true;
+    price = IPrice(_contractAddresses[0]);
+    dividendAddress = _contractAddresses[1];
+    dividend = IDividend(_contractAddresses[1]);
+    teamAddress = _contractAddresses[2];
+    teamDividend = ITeam(_contractAddresses[2]);
+    lockedOttaTeam = _contractAddresses[3];
+    lockedOttaBroker = _contractAddresses[4];
+    lockedOttaMeshNFT = _contractAddresses[5];
+    lockedOttaMesh = _contractAddresses[6];
+    brokerDividend = IBroker(_contractAddresses[7]);
+    meshNFTDividend = IMeshNFTDividend(_contractAddresses[8]);
+    groupsDividend = IGroups(_contractAddresses[9]);
+    delegatorDividend = IDelegator(_contractAddresses[10]);
+    coordinatorDividend = ICoordinator(_contractAddresses[11]);
+    
+    emit ContractAddressesSetted(_contractAddresses);
   }
 
-  /// @notice Setting dividend contract address
-  /// @dev Since this contract is deployed before the dividend contract, the dividend contract address is set.
-  /// @dev Param and return same address
-  /// @param '_dividendAddress' The dividend contract address.
-  /// @return The dividend contract address.
-  function setDividend(address _dividendAddress)
-    public
-    onlyOwner
-    returns (address)
+  function ottaTransferToContracts(address[] calldata _contractAddresses)
+    external
   {
-    require(!isDividendSetted, "Already setted");
-    require(_dividendAddress != address(0), "Zero address");
-    isDividendSetted = true;
-    dividendAddress = _dividendAddress;
-    dividend = IDividend(dividendAddress);
-    emit DividendSetted(address(this), dividendAddress);
-    return dividendAddress;
-  }
-
-  /// @notice Setting VCADVTeam contract address
-  /// @dev Since this contract is deployed before the dividend contract, the dividend contract address is set.
-  /// @dev Param and return same address
-  /// @param '_vcADVTeamAddress' The dividend contract address.
-  /// @return The VCADVTeam contract address.
-  function setVCADVTeam(address _vcADVTeamAddress)
-    public
-    onlyOwner
-    returns (address)
-  {
-    require(!isVCADVTeamSetted, "Already setted");
-    require(_vcADVTeamAddress != address(0), "Zero address");
-    isVCADVTeamSetted = true;
-    vcADVTeamAddress = _vcADVTeamAddress;
-    vcADVTeam = IVCADVTeam(vcADVTeamAddress);
-    emit VCADVTeamAddressSetted(address(this), vcADVTeamAddress);
-    return vcADVTeamAddress;
-  }
-
-  /// @notice Setting discount quantity
-  /// @dev Can be changed by governance decision
-  /// @param '_discountQuantity' The new discount quantity. 
-  function setDiscountQuantity(uint256 _discountQuantity)
-  public
-  returns(uint256)
-  {
-    require(msg.sender == timelockAddress, "Only Timelock");
-    discountQuantity = _discountQuantity;
-    return discountQuantity;
+    require(msg.sender == ownerAddress, "only owner");
+    require(
+      _contractAddresses[0] != address(0) &&
+        _contractAddresses[1] != address(0) &&
+        _contractAddresses[2] != address(0) &&
+        _contractAddresses[3] != address(0) &&
+        _contractAddresses[4] != address(0) &&
+        _contractAddresses[5] != address(0),
+      "zero addresses"
+    );
+    require(!isTransfered, "Already setted");
+    isTransfered = true;
+    _transfer(address(this), _contractAddresses[0], 2500 * 10**18); //ico
+    _transfer(address(this), _contractAddresses[1], 500 * 10**18); //airdrop
+    _transfer(address(this), _contractAddresses[2], 2000 * 10**18); //tv1
+    _transfer(address(this), _contractAddresses[3], 4000 * 10**18); //tv2
+    _transfer(address(this), _contractAddresses[4], 6000 * 10**18); //tv3
+    _transfer(address(this), _contractAddresses[5], 8000 * 10**18); //tv4
+    emit OttaTransfered(_contractAddresses);
   }
 
   /// @return  The name of the token.
@@ -505,36 +503,61 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
   function unlocked() internal {
     if (lockedSupply == 0) {
       dividendDayCounter += 1;
-      if (dividendDayCounter == dividendDay) {  
+      if (dividendDayCounter == dividendDay) {
         dividend.setEpoch(true);
       }
       if (dividendDayCounter == lockDay) {
-        vcADVTeam.setEpochForVCDividend(false);
+        teamDividend.setEpochForTeamDividend(false);
+        brokerDividend.setEpochForBrokerDividend(false); /* ******************* */
+        meshNFTDividend.setEpochForMeshNFTDividend(false); /* ******************* */
+        delegatorDividend.setEpochForDelegatorDividend(false); /* ******************* */
+        coordinatorDividend.setEpochForCoordinatorDividend(false); /* ******************* */
+        groupsDividend.setEpochForGroupsDividend(false); /* ******************* */
       }
-      if (dividendDayCounter == lockDay + dividendDay) { 
+      if (dividendDayCounter == lockDay + dividendDay) {
         dividend.setEpoch(false);
         dividendDayCounter = 0;
         dividendTime = block.timestamp;
         dividend.getDividendRequesting();
-        vcADVTeam.setEpochForVCDividend(true);
+        dividend.getMeshDividendRequesting(); /* ****************** */
+        teamDividend.setEpochForTeamDividend(true);
+        brokerDividend.setEpochForBrokerDividend(true); /* ******************* */
+        meshNFTDividend.setEpochForMeshNFTDividend(true); /* ******************* */
+        delegatorDividend.setEpochForDelegatorDividend(true); /* ******************* */
+        coordinatorDividend.setEpochForCoordinatorDividend(true); /* ******************* */
+        groupsDividend.setEpochForGroupsDividend(true); /* ******************* */
       }
     } else {
-      lockedSupply = lockedSupply.sub(11500 * 10**18);
-      unlockedSupply = unlockedSupply.add(9200 * 10**18);
-      lockedOttaFeeBalance = lockedOttaFeeBalance.add(2300 * 10**18);
+      lockedSupply = lockedSupply.sub(11448 * 10**18);
+      unlockedSupply = unlockedSupply.add(7200 * 10**18);
+      lockedOttaTeamFeeBalance = lockedOttaTeamFeeBalance.add(576 * 10**18);
+      lockedOttaBrokerFeeBalance = lockedOttaBrokerFeeBalance.add(576 * 10**18);
+      lockedOttaMeshNFTFeeBalance = lockedOttaMeshNFTFeeBalance.add(576 * 10**18);
+      lockedOttaMeshFeeBalance = lockedOttaMeshFeeBalance.add(2520 * 10**18);
       dividendDayCounter += 1;
-      if (dividendDayCounter == dividendDay) {  
+      if (dividendDayCounter == dividendDay) {
         dividend.setEpoch(true);
       }
       if (dividendDayCounter == lockDay) {
-        vcADVTeam.setEpochForVCDividend(false);
+        teamDividend.setEpochForTeamDividend(false);
+        brokerDividend.setEpochForBrokerDividend(false); /* ******************* */
+        meshNFTDividend.setEpochForMeshNFTDividend(false); /* ******************* */
+        delegatorDividend.setEpochForDelegatorDividend(false); /* ******************* */
+        coordinatorDividend.setEpochForCoordinatorDividend(false); /* ******************* */
+        groupsDividend.setEpochForGroupsDividend(false); /* ******************* */
       }
-      if (dividendDayCounter == lockDay + dividendDay) { 
+      if (dividendDayCounter == lockDay + dividendDay) {
         dividend.setEpoch(false);
         dividendDayCounter = 0;
         dividendTime = block.timestamp;
         dividend.getDividendRequesting();
-        vcADVTeam.setEpochForVCDividend(true);
+        dividend.getMeshDividendRequesting(); /* ****************** */
+        teamDividend.setEpochForTeamDividend(true);
+        brokerDividend.setEpochForBrokerDividend(true); /* ******************* */
+        meshNFTDividend.setEpochForMeshNFTDividend(true); /* ******************* */
+        delegatorDividend.setEpochForDelegatorDividend(true); /* ******************* */
+        coordinatorDividend.setEpochForCoordinatorDividend(true); /* ******************* */
+        groupsDividend.setEpochForGroupsDividend(true); /* ******************* */
       }
     }
   }
@@ -609,7 +632,6 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
     emit Transfer(account, address(0), amount);
   }
 
-
   /// @notice Transfer function written for the protocol to transfer
   /// from "unlockedSupply" after selling otta tokens
   /// @dev 'sender' this contract
@@ -634,11 +656,20 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
   /// Requirements:
   /// 'recipient' cannot be the zero address.
   /// `sender` must have a balance of at least `amount`.
-  function _transferLockedOttaFee(uint256 amount) internal virtual {
-    uint256 senderBalance = lockedOttaFeeBalance;
-    require(senderBalance >= amount, "Insufficient Protocol Fee Balance!");
-    lockedOttaFeeBalance = lockedOttaFeeBalance.sub(amount);
-    _transfer(address(this), lockedOtta, amount);
+  function _transferOttaFee(
+    uint256 _amountTeam,
+    uint256 _amountBroker,
+    uint256 _amountMeshNFT,
+    uint256 _amountMesh
+  ) internal virtual {
+    lockedOttaTeamFeeBalance = lockedOttaTeamFeeBalance.sub(_amountTeam);
+    lockedOttaBrokerFeeBalance = lockedOttaBrokerFeeBalance.sub(_amountBroker);
+    lockedOttaMeshNFTFeeBalance = lockedOttaMeshNFTFeeBalance.sub(_amountMeshNFT);
+    lockedOttaMeshFeeBalance = lockedOttaMeshFeeBalance.sub(_amountMesh);
+    _transfer(address(this), lockedOttaTeam, _amountTeam);
+    _transfer(address(this), lockedOttaBroker, _amountBroker);
+    _transfer(address(this), lockedOttaMeshNFT, _amountMeshNFT);
+    _transfer(address(this), lockedOttaMesh, _amountMesh);
   }
 
   function _delegate(address delegator, address delegatee) internal {
@@ -714,5 +745,5 @@ contract Otta is Context, IERC20, IERC20Metadata, KeeperCompatibleInterface {
   {
     require(n < 2**32, errorMessage);
     return uint32(n);
-  } 
+  }
 }

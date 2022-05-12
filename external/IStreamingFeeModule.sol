@@ -16,6 +16,11 @@ import {ISetToken} from "../external/ISetToken.sol";
 
 interface IStreamingFeeModule{
     /* ================= Functions ================= */
-    /// @notice Gets TTFF fee with StreamingFee Module.
+    /// @notice Gets Fund fee with StreamingFee Module.
     function accrueFee(ISetToken _setToken) external;
+    function updateStreamingFee(
+        ISetToken _setToken,
+        uint256 _newFee
+    )
+        external;
 }

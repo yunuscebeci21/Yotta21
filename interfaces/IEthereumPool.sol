@@ -3,8 +3,8 @@ pragma solidity ^0.8.0;
 
 interface IEthereumPool {
     /*=============== Events ========================*/
-    /// @notice An event thats emitted when Taum token mint
-    event MintTaumTokenToUser(address _userAddress, uint256 _taumQuantity);
+    /// @notice An event thats emitted when LPTTFF token mint
+    event MintLPTTFFTokenToUser(address _userAddress, uint256 _lpTtffQuantity);
     /// @notice An event thats emitted when sending for Weth to UniswapV2Adapter Contract
     event SendWETHtoLiquidity(address _recipient, uint256 _amount);
     /// @notice An event thats emitted when TTFF created

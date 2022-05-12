@@ -10,7 +10,7 @@ import { IEthereumPool } from "./interfaces/IEthereumPool.sol";
 import { IPrice } from "./interfaces/IPrice.sol";
 import { ITTFFPool } from "./interfaces/ITTFFPool.sol";
 import { ITradeFromUniswapV2 } from "./interfaces/ITradeFromUniswapV2.sol";
-import { ITaum } from "./interfaces/ITaum.sol";
+import { ILPTTFF } from "./interfaces/ILPTTFF.sol";
 import { KeeperCompatibleInterface } from "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 
 /// @title EthereumPool
@@ -31,14 +31,15 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
   /// @notice Address of contract creator
   address public owner;
   /// @notice Address of timelock
-  address public timelockAddress;
+  address public timelockForOtta;
+  address public timelockForMesh;
   /// @notice Address of ttff pool address
   address public ttffPoolAddress;
   /// @notice Address of the UniswapAdapter
   address public uniswapV2AdapterAddress;
   /// @notice Address of Ethereum Vault
   address public protocolVault;
-  /// @notice Address of Gradual Taum Contract
+  /// @notice Address of Gradual LPTTFF Contract
   address public protocolGradualAddress;
   /// @notice Address of buyer
   address public tradeFromUniswapV2Address;
@@ -68,8 +69,8 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
   IWeth public weth;
   /// @notice Importing trade methods
   ITradeFromUniswapV2 public trade;
-  /// @notice Importing Taum contract interface as taum
-  ITaum public taum;
+  /// @notice Importing LPTTFF contract interface as lpTtff
+  ILPTTFF public lpTtff;
 
   /*================== Modifiers =====================*/
   /// @notice Throws if the sender is not an owner
@@ -80,27 +81,29 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
 
   /// @notice Throws if the sender is not an timelock
   modifier onlyTimeLock() {
-    require(msg.sender == timelockAddress, "Only Timelock");
+    require(msg.sender == timelockForOtta || msg.sender == timelockForMesh, "Only Timelock");
     _;
   }
 
   /*================== Constructor =====================*/
   constructor(
-    address _timelockAddress,
+    address _timelockForOtta,
+    address _timelockForMesh,
     address _weth,
     address _ttffPool,
     address _uniswapV2Adapter,
     address _ethPoolTTFFAdapter,
     address _protocolVault,
-    address _taumAddress,
+    address _lpTtffAddress,
     address _tradeFromUniswapV2Address,
     address _protocolGradualAddress
   ) {
     owner = msg.sender;
-    require(_timelockAddress != address(0), "Zero address");
-    timelockAddress = _timelockAddress;
+    require(_timelockForOtta != address(0), "Zero address");
+    timelockForOtta = _timelockForOtta;
+    timelockForMesh = _timelockForMesh;
     limit = 0;
-    limitValue = 0.2 * 10 ** 18;
+    limitValue = 0.01 * 10 ** 18;
     minValue = 0.005 * 10 ** 18;
     ttffPercentageForAmount = 20; // Bu değerlerin okunmasına ihtiyaç var mı?
     protocolVaultPercentage = 25; //  ---
@@ -116,8 +119,8 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
     ethPoolTTFFAdapter = IEthereumPoolTTFFAdapter(_ethPoolTTFFAdapter);
     require(_protocolVault != address(0), "Zero address");
     protocolVault = _protocolVault;
-    require(_taumAddress != address(0), "Zero address");
-    taum = ITaum(_taumAddress);
+    require(_lpTtffAddress != address(0), "Zero address");
+    lpTtff = ILPTTFF(_lpTtffAddress);
     require(_tradeFromUniswapV2Address != address(0), "Zero address");
     tradeFromUniswapV2Address = _tradeFromUniswapV2Address;
     trade = ITradeFromUniswapV2(tradeFromUniswapV2Address);
@@ -129,7 +132,7 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
   /// @notice This function is recieving ETH from user
   /// @dev This function sends 25% of recieved eth to Protocol Vault
   /// @dev This function is calling tokenMint function
-  /// @dev When user send ETH to pool it will mint Taum Token to user
+  /// @dev When user send ETH to pool it will mint LPTTFF Token to user
   receive() external payable {
     require(msg.value > minValue, "Insufficient amount entry");
     address _userAddress = msg.sender;
@@ -139,10 +142,10 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
     limit = limit.add(_ethQuantity).sub(_ethToVault);
     bool _successTransfer = weth.transfer(protocolVault, _ethToVault);
     require(_successTransfer, "Transfer failed");
-    (, , uint256 _taumPrice) = price.getTaumPrice(_ethQuantity);
-    uint256 _taumAmount = (_ethQuantity.mul(10**18)).div(_taumPrice);
-    taum.tokenMint(_userAddress, _taumAmount);
-    emit MintTaumTokenToUser(_userAddress, _taumAmount);
+    (, , uint256 _lpTtffPrice) = price.getLPTTFFPrice(_ethQuantity);
+    uint256 _lpTtffAmount = (_ethQuantity.mul(10**18)).div(_lpTtffPrice);
+    lpTtff.tokenMint(_userAddress, _lpTtffAmount);
+    emit MintLPTTFFTokenToUser(_userAddress, _lpTtffAmount);
   }
 
   /*============ External Functions ================ */
@@ -154,7 +157,7 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
 
   /// @inheritdoc IEthereumPool
   function feedVault(uint256 _amount) external override returns (bool) {
-    require(msg.sender == protocolGradualAddress, "Only Gradual Taum");
+    require(msg.sender == protocolGradualAddress, "Only Gradual LPTTFF");
     limit = 0;
     bool _successTransfer = weth.transfer(protocolVault, _amount);
     require(_successTransfer, "Transfer failed.");
@@ -234,7 +237,7 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
     require(successGet, "Fail bring TTFFs from TTFF Pool");
     bool successAdd = uniswapV2Adapter.addLiquidity();
     require(successAdd, "Fail add liquidity to UniswapV2");
-    emit TTFFCreated(ttffPool.getTTFF(), issueQuantity);
+    emit TTFFCreated(ttffPool.getTTFF(), issueQuantity); 
   }
 
   /// @notice It will send ETH to adapter

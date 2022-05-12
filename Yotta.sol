@@ -11,7 +11,7 @@ contract Yotta is ERC20 {
   
   /*================== State Variables ===================*/
   /// @notice Total supply Yotta
-  uint256 public constant TOTAL_SUPPLY_YOTTA = 281600000 * 10 ** 18;
+  uint256 public constant TOTAL_SUPPLY_YOTTA = 7040000*10**18;
 
   /*=============== Constructor ========================*/
   constructor(

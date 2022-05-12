@@ -33,9 +33,9 @@ contract Timelock {
     uint256 eta
   );
 
-  uint256 public constant GRACE_PERIOD = 14 days;
-  uint256 public constant MINIMUM_DELAY = 2 days;
-  uint256 public constant MAXIMUM_DELAY = 30 days;
+  uint256 public constant GRACE_PERIOD = 7200;
+  uint256 public constant MINIMUM_DELAY = 7000;
+  uint256 public constant MAXIMUM_DELAY = 14400;
 
   address public admin;
   address public pendingAdmin;

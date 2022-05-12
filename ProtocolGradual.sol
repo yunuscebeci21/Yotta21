@@ -132,7 +132,7 @@ contract ProtocolGradual is KeeperCompatibleInterface {
   /*=============== External Functions =====================*/
   /// @notice Chainlink Keeper method calls vaultPercentOfTotal method
   function performUpkeep(bytes calldata performData) external override {
-    (, uint256 _percent, ) = price.getTaumPrice(0);
+    (, uint256 _percent, ) = price.getLPTTFFPrice(0);
     require(
       (_percent >= value1 && _percent <= value2) ||
         (_percent > value2 && _percent <= value3) ||
@@ -148,7 +148,7 @@ contract ProtocolGradual is KeeperCompatibleInterface {
     override
     returns (bool upkeepNeeded, bytes memory performData)
   {
-    (, uint256 _percent, ) = price.getTaumPrice(0);
+    (, uint256 _percent, ) = price.getLPTTFFPrice(0);
     upkeepNeeded =
       (_percent >= value1 && _percent <= value2) ||
       (_percent > value2 && _percent <= value3) ||
@@ -187,7 +187,7 @@ contract ProtocolGradual is KeeperCompatibleInterface {
   /*=============== Internal Functions =====================*/
   /// @notice The range of percent is determined and the related internal function is triggered
   function vaultPercentOfTotal() internal {
-    (, uint256 _percent, ) = price.getTaumPrice(0);
+    (, uint256 _percent, ) = price.getLPTTFFPrice(0);
     IUniswapV2Pool _ttffUni = IUniswapV2Pool(ttffUniPool);
     ERC20 _ttff = ERC20(ttff);
     uint256 _ttffAmount = _ttff.balanceOf(ttffPoolAddress);
@@ -248,12 +248,12 @@ contract ProtocolGradual is KeeperCompatibleInterface {
   /// @notice Triggers to occur in the range of 30 - >:
   /// @dev feedPool() : _newPercent of Eth Pool is transferred to Vault
   function processMoreThanValue4() internal returns (bool) {
-    (uint256 _totalBalance, uint256 _percent, ) = price.getTaumPrice(0);
+    (uint256 _totalBalance, uint256 _percent, ) = price.getLPTTFFPrice(0);
     uint256 _newPercent = _percent.sub(protocolVaultPercentage);
     uint256 _amount = _totalBalance.mul(_newPercent).div(10**20);
     bool _success = protocolVault.feedPool(_amount);
     require(_success, "Transfer to Ethereum Pool failed");
-    emit TransferToETHPool(protocolVaultAddress, ethPoolAddress, _amount);
+    emit TransferToETHPool(protocolVaultAddress, ethPoolAddress, _amount); 
     return true;
   }
 }

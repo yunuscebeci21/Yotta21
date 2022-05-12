@@ -25,8 +25,8 @@ contract ProtocolVault is IProtocolVault {
   address public ethPoolAddress;
   // Address of wrapper ether
   address public wethAddress;
-  // address of taum address
-  address public taumAddress;
+  // address of LPTTFF address
+  address public LPTTFFAddress;
   // address of price contract
   address public priceAddress;
   // set state of protocol vault
@@ -38,10 +38,10 @@ contract ProtocolVault is IProtocolVault {
   IEthereumPool public ethPool;
 
   /*============ Modifiers ================ */
-  /// @notice Throws if the sender is not Taum or ProtocolGradual
+  /// @notice Throws if the sender is not LPTTFF or ProtocolGradual
   modifier onlyProtocolContracts() {
     require(
-      (msg.sender == taumAddress ||
+      (msg.sender == LPTTFFAddress ||
         msg.sender == protocolGradualAddress),
       "Only Protocol"
     );
@@ -57,13 +57,13 @@ contract ProtocolVault is IProtocolVault {
   }
 
   /*============ Constructor ================ */
-  constructor(address _weth, address _taumAddress) {
+  constructor(address _weth, address _LPTTFFAddress) {
     owner = msg.sender;
     require(_weth != address(0), "Zero address");
     wethAddress = _weth;
     weth = IWeth(wethAddress);
-    require(_taumAddress != address(0), "Zero address");
-    taumAddress = _taumAddress;
+    require(_LPTTFFAddress != address(0), "Zero address");
+    LPTTFFAddress = _LPTTFFAddress;
   }
 
   /*================= Functions=================*/

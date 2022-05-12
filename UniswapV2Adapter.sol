@@ -17,7 +17,7 @@ contract UniswapV2Adapter is IUniswapV2Adapter {
     /// @notice An event thats emitted when TTFFPool contract address setting
     event TTFFPoolSetted(address _ttffPoolAddress);
     /// @notice An event thats emitted when Price contract address setting
-    event PriceSetted(address _priceAddress);
+    event PriceSetted(address _priceAddress); 
     /// @notice An event thats emitted when ProtocolVault contract address setting
     event ProtocolVaultSetted(address _protocolVaultAddress);
     /// @notice An event thats emitted when EthereumPool contract address setting
@@ -120,7 +120,7 @@ contract UniswapV2Adapter is IUniswapV2Adapter {
         require(msg.sender == ethPoolAddress, "Only Ethereum Pool");
         ERC20 _ttff = ERC20(ttff);
         ERC20 _weth = ERC20(wethAddress);
-        uint256 _ttffPrice = price.getTtffPrice();
+        uint256 _ttffPrice = price.getTtffPrice(); 
         uint256 _ttffAmount = (_ttff.balanceOf(address(this)))
             .mul(_ttffPrice)
             .div(10**18);

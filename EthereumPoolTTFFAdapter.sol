@@ -161,7 +161,7 @@ contract EthereumPoolTTFFAdapter is IEthereumPoolTTFFAdapter {
     require(_ethPoolAddress != address(0), "Zero address");
     isEthPoolSetted = true;
     ethPoolAddress = _ethPoolAddress;
-    ethPool = IEthereumPool(ethPoolAddress);
+    ethPool = IEthereumPool(ethPoolAddress); 
     emit EthPoolSetted(ethPoolAddress);
     return (ethPoolAddress);
   }

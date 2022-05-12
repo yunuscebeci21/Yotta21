@@ -30,8 +30,8 @@ contract Price is IPrice {
   address public ottaUniPool;
   /// @notice Address of ttff univ2
   address public ttffUniPool;
-  /// @notice Address of taum
-  address public taum;
+  /// @notice Address of lpTtff
+  address public lpTtff;
   /// @notice Address of ttff
   address public ttff;
   /// @notice Address of uniswapV2 adapter
@@ -69,7 +69,7 @@ contract Price is IPrice {
     address _weth,
     address _ttffUniPool,
     address _ottaUniPool,
-    address _taum,
+    address _lpTtff,
     address _ttff,
     address[] memory _components
   ) {
@@ -81,8 +81,8 @@ contract Price is IPrice {
     ttffUniPool = _ttffUniPool;
     require(_ottaUniPool != address(0), "Zero address");
     ottaUniPool = _ottaUniPool;
-    require(_taum != address(0), "Zero address");
-    taum = _taum;
+    require(_lpTtff != address(0), "Zero address");
+    lpTtff = _lpTtff;
     require(_ttff != address(0), "Zero address");
     ttff = _ttff;
     require(_components.length > 0, "Zero components array");
@@ -139,14 +139,14 @@ contract Price is IPrice {
   }
 
   /// @inheritdoc IPrice
-  function getTaumPrice(uint256 _ethAmount)
+  function getLPTTFFPrice(uint256 _ethAmount)
     external
     view
     override
     returns (
       uint256 _totalAmount,
       uint256 _protocolPercent,
-      uint256 _taumPrice
+      uint256 _lpTtffPrice
     )
   {
     uint256 _poolAndVaultBalance = (weth.balanceOf(ethPoolAddress))
@@ -171,14 +171,14 @@ contract Price is IPrice {
       10**20
     );
 
-    ERC20 _taum = ERC20(taum);
+    ERC20 _lpTtff = ERC20(lpTtff);
     _totalAmount = _poolAndVaultBalance.add(_reserveAmountInUniswap).add(
       _ttffAmount
     );
     _protocolPercent = weth.balanceOf(protocolVaultAddress).mul(10**20).div(
       _totalAmount
     );
-    _taumPrice = _totalAmount.mul(10**18).div(_taum.totalSupply());
+    _lpTtffPrice = _totalAmount.mul(10**18).div(_lpTtff.totalSupply());
   }
 
   /* ================ Public Functions ================== */
@@ -250,12 +250,12 @@ contract Price is IPrice {
     public
     onlyOwner
     returns (address)
-  {
+  { 
     require(!isUniswapV2AdapterSetted, "Already setted");
     require(_uniswapV2Adapter != address(0), "Zero address");
     isUniswapV2AdapterSetted = true;
     uniswapV2Adapter = _uniswapV2Adapter;
-    emit UniswapV2AdapterSetted(uniswapV2Adapter);
+    emit UniswapV2AdapterSetted(uniswapV2Adapter);  
     return uniswapV2Adapter;
   }
 }

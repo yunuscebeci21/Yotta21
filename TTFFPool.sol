@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IUniswapV2Adapter } from "./interfaces/IUniswapV2Adapter.sol";
 import { ITTFFPool } from "./interfaces/ITTFFPool.sol";
@@ -9,7 +10,7 @@ import { ISetToken } from "./external/ISetToken.sol";
 import { ITradeModule } from "./external/ITradeModule.sol";
 import { KeeperCompatibleInterface } from "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 
-/// @title TTFPool
+/// @title TTFFPool
 /// @author Yotta21
 
 contract TTFFPool is ITTFFPool, KeeperCompatibleInterface {
@@ -23,7 +24,8 @@ contract TTFFPool is ITTFFPool, KeeperCompatibleInterface {
   /// @notice Addresses  of ttff token
   address public ttffAddress;
   /// @notice Timelock address
-  address public timelockAddress;
+  address public timelockForOtta;
+  address public timelockForMesh;
   /// @notice Chainlink keeper call time
   uint256 public immutable interval;
   /// @notice Chainlink keeper trigger last time
@@ -35,16 +37,16 @@ contract TTFFPool is ITTFFPool, KeeperCompatibleInterface {
 
   /*===================== Constructor ======================*/
   constructor(
-    uint256 _interval,
     address _uniswapV2Adapter,
     address _tradeFromUniswapV2Address,
     address _ttffAddress,
     address _streamingFeeModule,
     address _tradeModule,
-    address _timelockAddress
+    address _timelockForOtta,
+    address _timelockForMesh
   ) {
     owner = msg.sender;
-    interval = _interval;
+    interval = 600;
     lastTimeStamp = block.timestamp;
     require(_uniswapV2Adapter != address(0), "Zero address");
     uniswapV2AdapterAddress = _uniswapV2Adapter;
@@ -56,8 +58,8 @@ contract TTFFPool is ITTFFPool, KeeperCompatibleInterface {
     streamingFee = IStreamingFeeModule(_streamingFeeModule);
     require(_tradeModule != address(0), "zero address");
     tradeModule = ITradeModule(_tradeModule);
-    require(_timelockAddress != address(0), "zero address");
-    timelockAddress = _timelockAddress;
+    timelockForOtta = _timelockForOtta;
+    timelockForMesh = _timelockForMesh;
   }
 
   /* ================== Functions ================== */
@@ -88,7 +90,7 @@ contract TTFFPool is ITTFFPool, KeeperCompatibleInterface {
         address _receiveToken,
         uint256 _minReceiveQuantity,
         bytes memory _data) public {
-    require(msg.sender == timelockAddress, "Only Timelock");
+    require(msg.sender == timelockForOtta || msg.sender == timelockForMesh, "Only Timelock");
     ISetToken _ttff = ISetToken(_setToken);
     tradeModule.trade(_ttff,
                       _exchangeName,
@@ -97,6 +99,14 @@ contract TTFFPool is ITTFFPool, KeeperCompatibleInterface {
                       _receiveToken,
                       _minReceiveQuantity,
                       _data);
+    }
+
+    function updateFee(address _setToken,
+        uint256 _newFee
+        ) public {
+    require(msg.sender == timelockForOtta || msg.sender == timelockForMesh, "Only Timelock");
+    ISetToken _ttff = ISetToken(_setToken);
+    streamingFee.updateStreamingFee(_ttff, _newFee);
     }
 
   /// @notice Chainlink Keeper method calls unlocked method

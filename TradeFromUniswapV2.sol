@@ -223,7 +223,7 @@ contract TradeFromUniswapV2 is ITradeFromUniswapV2 {
     address[] memory _components = _ttff.getComponents();
     for (uint256 j = 0; j < _components.length; j++) {
       ERC20 _component = ERC20(_components[j]);
-      _component.approve(swapRouterAddress, MAX_INT);
+      _component.approve(swapRouterAddress, MAX_INT); 
     }
   }
 }
