@@ -20,6 +20,7 @@ contract LPTTFFTrade {
   address public timelockForOtta;
   address public timelockForMesh;
   ERC20 public lpTtffToken;
+  uint256 public constant MAX_INT = 2**256 - 1;
 
   constructor(address _timelockForOtta, address _timelockForMesh, address _dividend, address _lpTtffAddress, address _ethPoolAddress, address _protocolVaultAddress) {
       timelockForOtta = _timelockForOtta;
@@ -39,9 +40,14 @@ contract LPTTFFTrade {
         payable(ethPoolAddress).transfer(msg.value);
       }   
   }
+
+  function approveLPTtff() public {
+    lpTtffToken.approve(lpTtffAddress,MAX_INT);
+  }
   
   function sellLPTTFF(uint256 _lpTtffAmount) external {
     require(msg.sender == timelockForOtta || msg.sender == timelockForMesh, "only otta timelock or mesh timelock");
+    //lpTtffToken.transferFrom(address(this), protocolVaultAddress, _lpTtffAmount);
     (bool success,) = lpTtffAddress.delegatecall(
             abi.encodeWithSignature("receiver(uint256)", _lpTtffAmount));
     require(success, "lpTtff sell fail");    

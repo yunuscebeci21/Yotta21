@@ -32,7 +32,8 @@ contract Timelock {
     bytes data,
     uint256 eta
   );
-
+  
+  //oylamada kalma süresi 3 gün
   uint256 public constant GRACE_PERIOD = 7200;
   uint256 public constant MINIMUM_DELAY = 7000;
   uint256 public constant MAXIMUM_DELAY = 14400;

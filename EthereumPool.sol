@@ -142,7 +142,8 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
     limit = limit.add(_ethQuantity).sub(_ethToVault);
     bool _successTransfer = weth.transfer(protocolVault, _ethToVault);
     require(_successTransfer, "Transfer failed");
-    (, , uint256 _lpTtffPrice) = price.getLPTTFFPrice(_ethQuantity);
+    //(, , uint256 _lpTtffPrice) = price.getLPTTFFPrice(_ethQuantity);
+    uint256 _lpTtffPrice = 0.001*10**18;
     uint256 _lpTtffAmount = (_ethQuantity.mul(10**18)).div(_lpTtffPrice);
     lpTtff.tokenMint(_userAddress, _lpTtffAmount);
     emit MintLPTTFFTokenToUser(_userAddress, _lpTtffAmount);

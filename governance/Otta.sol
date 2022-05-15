@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { IDividend } from "../interfaces/IDividend.sol";
@@ -96,7 +97,7 @@ contract Otta is
   /// @notice Max mint token - Otta total supply
   uint256 public constant TOTAL_OTTA_AMOUNT = 88000000*10**18;
   /// @notice Transfer amount for Initial Finance
-  uint256 public constant INITIAL_FINANCE = 3543680*10**18; // 3000000 - 250000(ico) + 500000(airdrop)
+  uint256 public constant INITIAL_FINANCE = 3543680*10**18; // 3000000 - 2500000(ico) + 500000(airdrop)
   /// @notice Transfer amount for Treasury Vester
   uint256 public constant TREASURY_VESTER = 17600000*10**18;
   /// @notice The EIP-712 typehash for the contract's domain
@@ -143,11 +144,13 @@ contract Otta is
 
   /// @notice Importing price contract interface as price
   IPrice public price;
+  ERC20 public dai;
 
   /*=============== Constructor ========================*/
   constructor(
     string memory name_,
-    string memory symbol_
+    string memory symbol_,
+    address _dai
   ) {
     ownerAddress = msg.sender;
     _name = name_;
@@ -156,9 +159,10 @@ contract Otta is
     interval = 100;
     lastTimeStamp = block.timestamp;
     dividendTime = block.timestamp;
-    dividendDay = 84;
-    lockDay = 6;
-    discountQuantity = 10000 * 10**18;
+    dividendDay = 88;
+    lockDay = 2;
+    discountQuantity = 1000 * 10**18;
+    dai = ERC20(_dai);
     _mint(address(this), TOTAL_OTTA_AMOUNT);
     _transfer(
       address(this),
@@ -170,29 +174,28 @@ contract Otta is
 
   /* ================ Functions ================== */
   /// @notice The function to be triggered when the otta token will buy
-  /// @dev The amount of ethereum sent is calculated based on the otta price.
+  /// @dev The amount of dai sent is calculated based on the otta price.
   /// @dev Otta token is transferred to the caller and the protocol.
-  receive() external payable {
-    uint256 _ethAmount = msg.value;
+  function sellOtta(uint _amountDai) external { // dai ye çevrilcek*****
     require(msg.sender != address(0), "Zero address");
-    require(_ethAmount != 0, "Insufficient eth amount");
+    require(_amountDai != 0, "Insufficient dai amount");
     address _userAddress = msg.sender;
     uint256 _ottaPrice = price.getOttaPrice();
-    uint256 _tokens = (_ethAmount.mul(10**18)).div(_ottaPrice);
+    uint256 _tokens = (_amountDai.mul(10**18)).div(_ottaPrice);
     uint256 _userAllowance = 0;
-    if (_tokens >= (discountQuantity)) {
-      // değiştirilebilir olmayacak - sabit indirim miktarı - 400
-      // map yapısında indirimli alan wallet ı tut
-      isDiscountOtta[_userAddress] = true;
-      _userAllowance = _ethAmount.mul(12).div(100);
-      payable(_userAddress).transfer(_userAllowance);
-    }
     uint256 _lockedOttaFee = _tokens.mul(8).div(100); // team
     uint256 _lockedOttaBrokerFee = _tokens.mul(8).div(100); // broker
     uint256 _lockedOttaMeshNFTFee = _tokens.mul(8).div(100); // mesh nft
     uint256 _lockedOttaMeshFee = _tokens.mul(35).div(100); // mesh
     // 3. transfer gerçekleşicek (kilitlenicek contract ve kar payı contract ı)  %8
-    payable(dividendAddress).transfer(_ethAmount.sub(_userAllowance));
+    // gönderecek account otta adresi için approve olmalı
+    if (_tokens >= (discountQuantity)) {
+      // değiştirilebilir olmayacak - sabit indirim miktarı - 1000
+      // map yapısında indirimli alan wallet ı tut
+      isDiscountOtta[_userAddress] = true;
+      _userAllowance = _amountDai.mul(12).div(100);
+    }
+    dai.transferFrom(msg.sender, dividendAddress, _amountDai.sub(_userAllowance));
     _transferFromContract(msg.sender, _tokens);
     _transferOttaFee(_lockedOttaFee, _lockedOttaBrokerFee, _lockedOttaMeshNFTFee, _lockedOttaMeshFee);
     emit OttaTokenPurchased(msg.sender, _tokens);
@@ -218,7 +221,7 @@ contract Otta is
     performData = checkData;
   }
 
-  function getIsDiscount(address _account) external view returns (bool) {
+  function getIsDiscount(address _account) external view override returns (bool) {
     return isDiscountOtta[_account];
   }
 
@@ -330,12 +333,12 @@ contract Otta is
     );
     require(!isTransfered, "Already setted");
     isTransfered = true;
-    _transfer(address(this), _contractAddresses[0], 2500 * 10**18); //ico
-    _transfer(address(this), _contractAddresses[1], 500 * 10**18); //airdrop
-    _transfer(address(this), _contractAddresses[2], 2000 * 10**18); //tv1
-    _transfer(address(this), _contractAddresses[3], 4000 * 10**18); //tv2
-    _transfer(address(this), _contractAddresses[4], 6000 * 10**18); //tv3
-    _transfer(address(this), _contractAddresses[5], 8000 * 10**18); //tv4
+    _transfer(address(this), _contractAddresses[0], 2500000 * 10**18); //ico
+    _transfer(address(this), _contractAddresses[1], 500000 * 10**18); //airdrop
+    _transfer(address(this), _contractAddresses[2], 1760000 * 10**18); //tv1
+    _transfer(address(this), _contractAddresses[3], 3520000 * 10**18); //tv2
+    _transfer(address(this), _contractAddresses[4], 5280000 * 10**18); //tv3
+    _transfer(address(this), _contractAddresses[5], 7040000 * 10**18); //tv4
     emit OttaTransfered(_contractAddresses);
   }
 

@@ -30,6 +30,7 @@ contract MeshDAOTimelock {
         uint256 eta
     );
 
+    //oylamada kalma süresi 4 gün
     uint256 public constant GRACE_PERIOD = 10800;
     uint256 public constant MINIMUM_DELAY = 10000;
     uint256 public constant MAXIMUM_DELAY = 20000;

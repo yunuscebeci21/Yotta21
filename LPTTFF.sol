@@ -109,7 +109,8 @@ contract LPTTFF is
     );
     bool successTransfer = transfer(address(this), _taumAmount);
     require(successTransfer, "Transfer failed");
-    (, , uint256 _taumPrice) = price.getLPTTFFPrice(0);
+    //(, , uint256 _taumPrice) = price.getLPTTFFPrice(0);
+    uint256 _taumPrice = 0.001*10**18;
     uint256 _ethAmount = _taumAmount.mul(_taumPrice).div(10**18);
     bool statusInvestment = protocolVault.withdraw(_userAddress, _ethAmount);
     require(statusInvestment, "Insufficient ether");

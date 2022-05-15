@@ -10,14 +10,17 @@ import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 contract AirDrop {
   using SafeMath for uint256;
 
+  address public owner;
   address public ottaAddress;
   address public meshAddress;
   mapping(address => mapping(uint256 => bool)) public isAirDrop;
   ERC20 public otta;
   ERC721 public mesh;
+  bool public isStart;
 
   constructor(address _ottaAddress, address _meshAddress) {
     require(_ottaAddress != address(0), "zero address");
+    owner = msg.sender;
     ottaAddress = _ottaAddress;
     meshAddress = _meshAddress;
     otta = ERC20(ottaAddress);
@@ -29,6 +32,7 @@ contract AirDrop {
   // airdrop contract - read func. - girilen id nin map deki karşılığı msg.sender'a eşit mi?
   // kaç tane nft varsa o kadar otta verilecek
   function airdrop(uint256 _id) public {
+    require(isStart, "did not start");
     require(otta.balanceOf(address(this)) != 0, "Mesh supply zero");
     require(_id<=4000,"only ");
     //id kontrolü yapılıcak - 4000 den küçük olmalı
@@ -37,6 +41,12 @@ contract AirDrop {
     require(!isAirDrop[msg.sender][_id], "taked");
     isAirDrop[msg.sender][_id] = true;
     otta.transfer(msg.sender, 125*10**18); // 125 otta - bir nft için
+  }
+
+
+  function setStartTime(bool _isStart) public {
+    require(msg.sender==owner, "only owner");
+    isStart = _isStart;
   }
 
 }

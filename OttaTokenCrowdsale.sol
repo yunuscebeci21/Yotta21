@@ -17,6 +17,7 @@ contract OttaTokenCrowdsale is KeeperCompatibleInterface {
     uint256 amount
   );
 
+  address public owner;
   address public ottaAddress;
   address public dividend;
   address public ottaTimelock; 
@@ -43,10 +44,11 @@ contract OttaTokenCrowdsale is KeeperCompatibleInterface {
   ) {
     //require(_rate > 0, "rate must be greater than zero");
     require(_ottaAddress != address(0), "zero address");
+    owner = msg.sender;
     ottaAddress = _ottaAddress;
     ottaTimelock = _ottaTimelock;
     dividend = _dividend;
-    cost = 0.000015*10**18;
+    cost = 0.000015*10**18; // cost a değer atama *****
     lastTimeStamp = block.timestamp;
     otta = ERC20(ottaAddress);
   }
@@ -75,8 +77,15 @@ contract OttaTokenCrowdsale is KeeperCompatibleInterface {
     }
   }
 
+  function setCost(uint _newCost) public {
+    require(msg.sender==owner, "only owner");
+    cost = _newCost;
+  }
+
   function performUpkeep(bytes calldata performData) external override {
-    require((block.timestamp - lastTimeStamp) >= day, "not epoch");
+    // burda iki kontrol yap - hem gün hem de cost 0 dan farklı mı *** cost değişti mi???
+    // ilk başta cost sıfır
+    require(((block.timestamp - lastTimeStamp) >= day) && (cost!=0), "not epoch");
     lastTimeStamp = block.timestamp;
     icoDayCounter = icoDayCounter + 1;
     if (icoDayCounter == 1) {  // 30 günde bir tetiklenicek
@@ -97,7 +106,7 @@ contract OttaTokenCrowdsale is KeeperCompatibleInterface {
     override
     returns (bool upkeepNeeded, bytes memory performData)
   {
-    upkeepNeeded = (block.timestamp - lastTimeStamp) >= day;
+    upkeepNeeded = ((block.timestamp - lastTimeStamp) >= day) && (cost!=0);
     performData = checkData;
   }
 
