@@ -6,11 +6,14 @@ import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { IDividend } from "./interfaces/IDividend.sol";
 import { ILPTrade } from "./interfaces/ILPTrade.sol";
 import { ILockedOttaMesh } from "./interfaces/ILockedOttaMesh.sol";
+import { KeeperCompatibleInterface } from "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
+import { IUniswapV2Router02 } from "./external/IUniswapV2Router02.sol";
+
 
 /// @title Dividend
 /// @author Yotta21
 /// @notice The process of entering and exiting the dividend takes place.
-contract Dividend is IDividend {
+contract Dividend is IDividend, KeeperCompatibleInterface{
   using SafeMath for uint256;
 
   /* =================== State Variables ====================== */
@@ -41,6 +44,9 @@ contract Dividend is IDividend {
   address public lockedOttaMeshNFT;
   address public lockedOttaMesh;
   address public ottaTimelock; 
+  address public swapRouterAddress;
+  address public ethAddress;
+  address public ttffAddress;
   /// @notice Total number of wallets locking Otta tokens
   uint256 public walletCounter;
   /// @notice Total locked Otta token amount
@@ -49,8 +55,12 @@ contract Dividend is IDividend {
   uint256 public totalEthDividend;
   /// @notice Max integer value
   uint256 public constant MAX_INT = 2**256 - 1;
+  uint256 public constant DEADLINE = 5 hours;
   /// @notice Period counter for dividend
   uint256 public periodCounter;
+  uint256 public lastTimeStamp;
+
+  uint public immutable interval;
   //uint256 public percentageToLpTrade; /* **************************** */
   /// @notice State of sets in this contract
   bool public isLockingEpoch;
@@ -64,6 +74,8 @@ contract Dividend is IDividend {
   ///
   ILockedOttaMesh public mesh;
 
+  IUniswapV2Router02 public swapRouter;
+
   /* =================== Constructor ====================== */
   constructor(
     address _ottaTokenAddress,
@@ -72,10 +84,14 @@ contract Dividend is IDividend {
     address _lockedOttaBroker,
     address _lockedOttaMeshNFT,
     address _lockedOttaMesh,
-    address _ethAddress
+    address _ethAddress,
+    address _ttffAddress,
+    address _swapRouterAddress
   ) {
     owner = msg.sender;
     //isLockingEpoch = false;
+    interval = 1 days;
+    lastTimeStamp = block.timestamp;
     require(_ottaTokenAddress != address(0), "zero address");
     ottaTokenAddress = _ottaTokenAddress;
     ottaToken = ERC20(ottaTokenAddress);
@@ -87,6 +103,10 @@ contract Dividend is IDividend {
     lockedOttaMesh = _lockedOttaMesh;
     mesh = ILockedOttaMesh(_lockedOttaMesh);
     eth = ERC20(_ethAddress);
+    ethAddress = _ethAddress;
+    ttffAddress = _ttffAddress;
+    swapRouterAddress = _swapRouterAddress;
+    swapRouter = IUniswapV2Router02(_swapRouterAddress);
     firstLPTrade();
   }
 
@@ -281,6 +301,26 @@ contract Dividend is IDividend {
     require(success, "out of range");
   }
 
+  /// @notice Chainlink Keeper method calls mintProtocol method
+  function performUpkeep(bytes calldata performData) external override {
+    require((block.timestamp - lastTimeStamp) > interval, "Not epoch");
+    lastTimeStamp = block.timestamp;
+    sellToTTFF();
+    performData;
+  }
+
+  /// @notice Checking the upkeepNeeded condition
+  function checkUpkeep(bytes calldata checkData)
+    external
+    view
+    override
+    returns (bool upkeepNeeded, bytes memory performData)
+  {
+    upkeepNeeded = (block.timestamp - lastTimeStamp) > interval;
+    performData = checkData;
+  }
+
+
   /* =================== Public Functions ====================== */
   /// @notice Returns locked otta amount of user
   /// @param _userAddress The address of user
@@ -311,5 +351,24 @@ contract Dividend is IDividend {
     arrayLPTrade.push(lpTrade);
     controlOfLPTradePercentage();
   } 
+
+  function approveComponents() public {
+    ERC20 ttff = ERC20(ttffAddress);
+    ttff.approve(swapRouterAddress, MAX_INT);
+    eth.approve(swapRouterAddress, MAX_INT);
+  }
+
+  function sellToTTFF() internal {
+    address[] memory _path = new address[](2);
+    _path[0] = ethAddress;
+    _path[1] = ttffAddress;
+    swapRouter.swapExactTokensForTokens(
+      eth.balanceOf(address(this)),
+      0,
+      _path,
+      address(this),
+      block.timestamp + DEADLINE
+    );
+  }
 
 }

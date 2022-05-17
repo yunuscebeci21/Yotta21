@@ -1,6 +1,10 @@
-pragma solidity ^0.5.16;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 
-import "./SafeMath.sol";
+import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import { ISetToken } from "../external/ISetToken.sol";
+import { ITradeModule } from "../external/ITradeModule.sol";
+
 
 contract Timelock {
   using SafeMath for uint256;
@@ -39,6 +43,9 @@ contract Timelock {
   uint256 public constant MAXIMUM_DELAY = 14400;
 
   address public admin;
+  address public owner;
+  address public emergencyWalletAddress;
+  address public ttffAddress;
   address public pendingAdmin;
   uint256 public delay;
 
@@ -46,7 +53,9 @@ contract Timelock {
 
   mapping(bytes32 => bool) public queuedTransactions;
 
-  constructor(uint256 delay_) public {
+  ITradeModule public tradeModule;
+
+  constructor(uint256 delay_, address _tradeModule) {
     require(
       delay_ >= MINIMUM_DELAY,
       "Timelock::constructor: Delay must exceed minimum delay."
@@ -56,16 +65,50 @@ contract Timelock {
       "Timelock::setDelay: Delay must not exceed maximum delay."
     );
 
+    owner = msg.sender;
     delay = delay_;
+    tradeModule = ITradeModule(_tradeModule);
   }
 
-  function() external payable {}
+  receive() external payable {}
+
+  function rebalancing(address _setToken,
+        string calldata _exchangeName,
+        address _sendToken,
+        uint256 _sendQuantity,
+        address _receiveToken,
+        uint256 _minReceiveQuantity,
+        bytes calldata _data) external {
+    require(msg.sender == address(this) || msg.sender == emergencyWalletAddress, "Only Timelock or Emergency Wallet");
+    // multiwallet otta timelock tarafından set edilebilir olucak
+    // timelock contract'ında ttff set fonksiyonu olmalı 
+    ISetToken _ttff = ISetToken(_setToken);
+    tradeModule.trade(_ttff,
+                      _exchangeName,
+                      _sendToken,
+                      _sendQuantity,
+                      _receiveToken,
+                      _minReceiveQuantity,
+                      _data);
+    }
+
 
   function setFirstAdmin(address admin_) public {
+    require(msg.sender==owner, "only owner");
     require(!isFirstAdminSetted, "Timelock::setFirstAdmin: Already setted.");
     isFirstAdminSetted = true;
     admin = admin_;
     emit NewAdmin(admin);
+  }
+
+  function setEmergencyWallet(address _newEmergencyWalletAddress) public {
+    require(msg.sender==address(this),"only this address");
+    emergencyWalletAddress = _newEmergencyWalletAddress;
+  }
+
+  function setTTFF(address _ttffAddress) public {
+    require(msg.sender==owner,"only owner");
+    ttffAddress = _ttffAddress;
   }
 
   function setDelay(uint256 delay_) public {
@@ -185,7 +228,7 @@ contract Timelock {
     }
 
     // solium-disable-next-line security/no-call-value
-    (bool success, bytes memory returnData) = target.call.value(value)(
+    (bool success, bytes memory returnData) = target.call{value: value}(
       callData
     );
     require(

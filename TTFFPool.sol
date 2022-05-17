@@ -81,7 +81,7 @@ contract TTFFPool is ITTFFPool {
 
   /// @notice Rebalancing for TTFF
   // otta timelock contract yazılmalı*******  
-  function rebalancing(address _setToken,
+  /*function rebalancing(address _setToken,
         string memory _exchangeName,
         address _sendToken,
         uint256 _sendQuantity,
@@ -99,7 +99,7 @@ contract TTFFPool is ITTFFPool {
                       _receiveToken,
                       _minReceiveQuantity,
                       _data);
-    }
+    }*/
 
     /*function updateFee(address _setToken,
         uint256 _newFee
