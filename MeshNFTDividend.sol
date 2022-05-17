@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { IMeshNFTDividend } from "./interfaces/IMeshNFTDividend.sol";
 import { IWeth } from "./external/IWeth.sol";
@@ -38,18 +39,20 @@ contract MeshNFTDividend is IMeshNFTDividend {
   ICurrentVotes public ottaVotes;
   IDividend public dividend;
   ERC721 public mesh;
+  ERC20 public eth;
 
   /* =================== Constructor ====================== */
-  constructor(address _ottaAddress, address _meshAddress) {
+  constructor(address _ottaAddress, address _meshAddress, address _ethAddress) {
     isLockingEpoch = true;
     ottaAddress = _ottaAddress;
     ottaVotes = ICurrentVotes(_ottaAddress);
     meshVotes = ICurrentVotes(_meshAddress);
     mesh = ERC721(_meshAddress);
+    eth = ERC20(_ethAddress);
   }
 
   /* =================== Functions ====================== */
-  receive() external payable {}
+  //receive() external payable {}
 
   /* =================== External Functions ====================== */
   /// @inheritdoc IMeshNFTDividend
@@ -61,7 +64,7 @@ contract MeshNFTDividend is IMeshNFTDividend {
     require(msg.sender == ottaAddress, "Only Otta");
     isLockingEpoch = epoch;
     if (isLockingEpoch) {
-      totalEthDividend = address(this).balance;
+      totalEthDividend = eth.balanceOf(address(this));
       meshNFTHoldCounter = 0;
       periodCounterMeshNFT += 1;
     }
@@ -93,7 +96,7 @@ contract MeshNFTDividend is IMeshNFTDividend {
     require(_userAddress != address(0), "zero address");
     receiveDividendCoordinator[_id][periodCounterMeshNFT] = true;
     uint256 _dividendQuantity = totalEthDividend.div(meshNFTHoldCounter);
-    _userAddress.transfer(_dividendQuantity);
+    eth.transfer(_userAddress, _dividendQuantity);
   }
 
   /// @notice Setting dividend contract address

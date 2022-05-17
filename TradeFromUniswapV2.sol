@@ -6,7 +6,7 @@ import { IEthereumPoolTTFFAdapter } from "./interfaces/IEthereumPoolTTFFAdapter.
 import { ITradeFromUniswapV2 } from "./interfaces/ITradeFromUniswapV2.sol";
 import { ISetToken } from "./external/ISetToken.sol";
 import { ITTFFPool } from "./interfaces/ITTFFPool.sol";
-import { IWeth } from "./external/IWeth.sol";
+//import { IWeth } from "./external/IWeth.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IBasicIssuanceModule } from "./external/IBasicIssuanceModule.sol";
 
@@ -58,7 +58,7 @@ contract TradeFromUniswapV2 is ITradeFromUniswapV2 {
   /// @notice Importing index liquidity pool methods
   ITTFFPool public ttffPool;
   /// @notice Importing wrapped ether methods
-  IWeth public weth;
+  ERC20 public weth;
   /// @notice Importing issuance module methods
   IBasicIssuanceModule public issuanceModule;
 
@@ -82,7 +82,7 @@ contract TradeFromUniswapV2 is ITradeFromUniswapV2 {
     ethPoolTTFFAdapter = IEthereumPoolTTFFAdapter(ethPoolTTFFAdapter);
     require(_wethAddress != address(0), "Zero address");
     wethAddress = _wethAddress;
-    weth = IWeth(wethAddress);
+    weth = ERC20(wethAddress);
     require(_swapRouterAddress != address(0), "Zero address");
     swapRouterAddress = _swapRouterAddress;
     swapRouter = IUniswapV2Router02(swapRouterAddress);

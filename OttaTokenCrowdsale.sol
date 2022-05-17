@@ -48,18 +48,21 @@ contract OttaTokenCrowdsale is KeeperCompatibleInterface {
     ottaAddress = _ottaAddress;
     ottaTimelock = _ottaTimelock;
     dividend = _dividend;
-    cost = 0.000015*10**18; // cost a değer atama *****
+    //cost = 20*10**18; // cost a değer atama *****
     lastTimeStamp = block.timestamp;
     otta = ERC20(ottaAddress);
   }
 
-  receive() external payable {
+  //receive() external payable {
+    //approve olmalı gönderen*****
+  function crowdsale(uint _amountToDai) external {
     //toplam ıco zamanını kontrol et
     require(icoDayCounter <= 2, "finish ico");  // 2 olmalı **********
-    uint256 _weiAmount = msg.value;
+    uint256 _weiAmount = _amountToDai;
     address _beneficiary = msg.sender;
     require(_beneficiary != address(0));
     require(_weiAmount != 0);
+    otta.transferFrom(msg.sender, address(this), _weiAmount);//*****
     // calculate token amount to be created
     uint256 _tokens = _weiAmount.div(cost).mul(10**18);
     if (stage == CrowdsaleStage.FirstICO) {
@@ -79,7 +82,7 @@ contract OttaTokenCrowdsale is KeeperCompatibleInterface {
 
   function setCost(uint _newCost) public {
     require(msg.sender==owner, "only owner");
-    cost = _newCost;
+    cost = _newCost; //20*10**18
   }
 
   function performUpkeep(bytes calldata performData) external override {
@@ -122,9 +125,9 @@ contract OttaTokenCrowdsale is KeeperCompatibleInterface {
     }
 
     if (stage == CrowdsaleStage.FirstICO) {
-      cost = 0.000015*10**18;
+      cost = 20*10**18;
     } else if (stage == CrowdsaleStage.SecondICO) {
-      cost = 0.000020*10**18;
+      cost = 25*10**18;
     }
   }
 

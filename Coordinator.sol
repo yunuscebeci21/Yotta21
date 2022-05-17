@@ -37,18 +37,20 @@ contract Coordinator is ICoordinator {
   ICurrentVotes public meshVotes;
   ICurrentVotes public ottaVotes;
   IDividend public dividend;
+  ERC20 public eth;
 
   /* =================== Constructor ====================== */
-  constructor(address _ottaAddress, address _meshAddress, address _timelockForOtta) {
+  constructor(address _ottaAddress, address _meshAddress, address _timelockForOtta, address _ethAddress) {
     isLockingEpoch = true;
     ottaAddress = _ottaAddress;
     ottaVotes = ICurrentVotes(_ottaAddress);
     meshVotes = ICurrentVotes(_meshAddress);
     timelockForOtta = _timelockForOtta;
+    eth = ERC20(_ethAddress);
   }
 
   /* =================== Functions ====================== */
-  receive() external payable {}
+  //receive() external payable {}
 
   /* =================== External Functions ====================== */
   /// @inheritdoc ICoordinator
@@ -60,7 +62,7 @@ contract Coordinator is ICoordinator {
     require(msg.sender == ottaAddress, "Only Otta");
     isLockingEpoch = epoch;
     if (isLockingEpoch) {
-      totalEthDividend = address(this).balance;
+      totalEthDividend = eth.balanceOf(address(this));
       coordinatorCounter = 0;
       periodCounterCoordinator += 1;
     }
@@ -78,8 +80,8 @@ contract Coordinator is ICoordinator {
     require(dividend.getPeriod() != 0, "not start");
     require(!isLockDividend, "locked");
     require(
-      ottaVotes.getCurrentVotes(msg.sender) == 0 &&
-        meshVotes.getCurrentVotes(msg.sender) == 2*10**18,
+      //ottaVotes.getCurrentVotes(msg.sender) == 0 &&
+        meshVotes.getCurrentVotes(msg.sender) == 41*10**18,
       "not coordinator"
     );
     require(!locked[msg.sender][periodCounterCoordinator], "locked");
@@ -94,8 +96,8 @@ contract Coordinator is ICoordinator {
     require(!isLockDividend, "locked");
     require(locked[_account][periodCounterCoordinator], "not locked");
     require(
-      ottaVotes.getCurrentVotes(_account) == 0 &&
-        meshVotes.getCurrentVotes(_account) == 2*10**18,
+      //ottaVotes.getCurrentVotes(_account) == 0 &&
+        meshVotes.getCurrentVotes(_account) == 41*10**18,
       "not coordinator"
     );
     require(
@@ -103,10 +105,10 @@ contract Coordinator is ICoordinator {
       "Already received"
     );
     address payable _userAddress = payable(_account);
-    require(_userAddress != address(0), "zero address");
+    //require(_userAddress != address(0), "zero address");
     receiveDividendCoordinator[_account][periodCounterCoordinator] = true;
     uint256 _dividendQuantity = totalEthDividend.div(coordinatorCounter);
-    _userAddress.transfer(_dividendQuantity);
+    eth.transfer(_userAddress, _dividendQuantity);
   }
 
   /// @notice Setting dividend contract address

@@ -91,9 +91,9 @@ contract LPTTFF is
     dividendAddress = _dividendAddress;
     timelockForOtta = _timelockForOtta;
     timelockForMesh = _timelockForMesh;
-    interval = 600; // Eski model - 10dk da bir otta tetikleniyor // mainnette 80 günde bir tetiklenicek
+    interval = 5 days ; //73 kere tetikleniyor yıllık // Eski model - 10dk da bir otta tetikleniyor // mainnette 80 günde bir tetiklenicek
     lastTimeStamp = block.timestamp;
-    _mint(ownerAddress, (100*10**18));
+    _mint(ownerAddress, (100*10**18));  //***
   }
 
   /*================== Functions =====================*/
@@ -101,7 +101,7 @@ contract LPTTFF is
   /// @notice Function called when taum token sale is made to the system
   /// @param _taumAmount Quantity of taum token. It must be wei type (10**18)
   function receiver(uint256 _taumAmount) external {
-    address payable _userAddress = payable(msg.sender);
+    address _userAddress = msg.sender;
     uint256 accountBalance = _balances[msg.sender];
     require(
       accountBalance >= _taumAmount,
@@ -109,8 +109,7 @@ contract LPTTFF is
     );
     bool successTransfer = transfer(address(this), _taumAmount);
     require(successTransfer, "Transfer failed");
-    //(, , uint256 _taumPrice) = price.getLPTTFFPrice(0);
-    uint256 _taumPrice = 0.001*10**18;
+    (, , uint256 _taumPrice) = price.getLPTTFFPrice(0);
     uint256 _ethAmount = _taumAmount.mul(_taumPrice).div(10**18);
     bool statusInvestment = protocolVault.withdraw(_userAddress, _ethAmount);
     require(statusInvestment, "Insufficient ether");
@@ -307,11 +306,11 @@ contract LPTTFF is
   /// @notice Calculate protocol fee and transfers Ether the dividend contract
   function mintProtocolFee() internal {
     uint256 _protocolFee = (_totalSupply.mul(yearlyValue)).div(100).div(
-      360*10**18 //yılda tetiklenme sayısına bölünür
+      73*10**18 //yılda tetiklenme sayısına bölünür
     );
     (, , uint256 _taumPrice) = price.getLPTTFFPrice(0);
     uint256 _feeQuantity = (_taumPrice.mul(_protocolFee)).div(10**18);
-    protocolVault.withdraw(payable(dividendAddress), _feeQuantity);
+    protocolVault.withdraw(dividendAddress, _feeQuantity);
   }
 
   /// @notice Sets `amount` as the allowance of `spender` over the `owner` s tokens.

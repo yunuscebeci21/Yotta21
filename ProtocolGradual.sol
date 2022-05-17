@@ -9,7 +9,7 @@ import { ITTFFPool } from "./interfaces/ITTFFPool.sol";
 import { IProtocolVault } from "./interfaces/IProtocolVault.sol";
 import { IUniswapV2Adapter } from "./interfaces/IUniswapV2Adapter.sol";
 import { ITradeFromUniswapV2 } from "./interfaces/ITradeFromUniswapV2.sol";
-import { IWeth } from "./external/IWeth.sol";
+//import { IWeth } from "./external/IWeth.sol";
 import { IPrice } from "./interfaces/IPrice.sol";
 import { IUniswapV2Pool } from "./external/IUniswapV2Pool.sol";
 import { KeeperCompatibleInterface } from "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
@@ -82,7 +82,7 @@ contract ProtocolGradual is KeeperCompatibleInterface {
   /// @notice Importing Price methods
   IPrice public price;
   /// @notice Importing weth methods
-  IWeth public weth;
+  ERC20 public weth;
 
   /*================= Modifiers =================*/
   /// @notice Throws if the sender is not owner
@@ -115,7 +115,7 @@ contract ProtocolGradual is KeeperCompatibleInterface {
     trade = ITradeFromUniswapV2(_tradeAddress);
     require(_wethAddress != address(0), "Zero address");
     wethAddress = _wethAddress;
-    weth = IWeth(wethAddress);
+    weth = ERC20(wethAddress);
     require(_ttffUniPool != address(0), "zero address");
     ttffUniPool = _ttffUniPool;
     ttff = _ttff;

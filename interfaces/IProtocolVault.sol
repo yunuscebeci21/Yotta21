@@ -13,7 +13,7 @@ interface IProtocolVault{
     /// @dev This method can callable from Taum contract 
     /// @param _account The Ether send address
     /// @param _withdrawAmount The amount of withdraw
-    function withdraw(address payable _account, uint256 _withdrawAmount) external returns (bool);
+    function withdraw(address _account, uint256 _withdrawAmount) external returns (bool);
 
     /// @notice It transfers Ether from ProtocolVault to EthereumPool.
     /// @dev It is triggers by ProtocolGradual contract

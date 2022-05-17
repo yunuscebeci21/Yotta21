@@ -3,7 +3,8 @@ pragma solidity ^0.8.0;
 
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { IUniswapV2Adapter } from "./interfaces/IUniswapV2Adapter.sol";
-import { IWeth } from "./external/IWeth.sol";
+//import { IWeth } from "./external/IWeth.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IEthereumPoolTTFFAdapter } from "./interfaces/IEthereumPoolTTFFAdapter.sol";
 import { ISetToken } from "./external/ISetToken.sol";
 import { IEthereumPool } from "./interfaces/IEthereumPool.sol";
@@ -66,7 +67,7 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
   /// @notice Importing Price Contract Methods
   IPrice public price;
   /// @notice Importing wrapped ether methods(Deposit-Withdraw and IERC20 methods)
-  IWeth public weth;
+  ERC20 public weth;
   /// @notice Importing trade methods
   ITradeFromUniswapV2 public trade;
   /// @notice Importing LPTTFF contract interface as lpTtff
@@ -81,7 +82,7 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
 
   /// @notice Throws if the sender is not an timelock
   modifier onlyTimeLock() {
-    require(msg.sender == timelockForOtta || msg.sender == timelockForMesh, "Only Timelock");
+    require(msg.sender == timelockForOtta, "Only Timelock");
     _;
   }
 
@@ -103,12 +104,12 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
     timelockForOtta = _timelockForOtta;
     timelockForMesh = _timelockForMesh;
     limit = 0;
-    limitValue = 0.01 * 10 ** 18;
-    minValue = 0.005 * 10 ** 18;
+    limitValue = 50000 * 10 ** 18;
+    minValue = 50 * 10 ** 18;
     ttffPercentageForAmount = 20; // Bu değerlerin okunmasına ihtiyaç var mı?
     protocolVaultPercentage = 25; //  ---
     require(_weth != address(0), "Zero address");
-    weth = IWeth(_weth);
+    weth = ERC20(_weth);
     require(_ttffPool != address(0), "Zero address");
     ttffPoolAddress = _ttffPool;
     ttffPool = ITTFFPool(ttffPoolAddress);
@@ -133,17 +134,19 @@ contract EthereumPool is IEthereumPool, KeeperCompatibleInterface {
   /// @dev This function sends 25% of recieved eth to Protocol Vault
   /// @dev This function is calling tokenMint function
   /// @dev When user send ETH to pool it will mint LPTTFF Token to user
-  receive() external payable {
-    require(msg.value > minValue, "Insufficient amount entry");
+  //receive() external payable {
+  //approve olmalı*****
+  function sellLPTTFF(uint _amountToDai) external {
+    require(_amountToDai > minValue, "Insufficient amount entry");
     address _userAddress = msg.sender;
-    uint256 _ethQuantity = msg.value;
-    weth.deposit{ value: _ethQuantity }();
+    uint256 _ethQuantity = _amountToDai;
+    //weth.deposit{ value: _ethQuantity }();
+    weth.transferFrom(msg.sender, address(this), _amountToDai);//*****
     uint256 _ethToVault = _ethQuantity.mul(protocolVaultPercentage).div(100);
     limit = limit.add(_ethQuantity).sub(_ethToVault);
     bool _successTransfer = weth.transfer(protocolVault, _ethToVault);
     require(_successTransfer, "Transfer failed");
-    //(, , uint256 _lpTtffPrice) = price.getLPTTFFPrice(_ethQuantity);
-    uint256 _lpTtffPrice = 0.001*10**18;
+    (, , uint256 _lpTtffPrice) = price.getLPTTFFPrice(_ethQuantity);
     uint256 _lpTtffAmount = (_ethQuantity.mul(10**18)).div(_lpTtffPrice);
     lpTtff.tokenMint(_userAddress, _lpTtffAmount);
     emit MintLPTTFFTokenToUser(_userAddress, _lpTtffAmount);

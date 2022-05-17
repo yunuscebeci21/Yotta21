@@ -35,16 +35,18 @@ contract Broker is IBroker {
   /// @notice Importing current votes methods
   IDividend public dividend;
   IOtta public otta;
+  ERC20 public eth;
 
   /* =================== Constructor ====================== */
-  constructor(address _ottaAddress) {
+  constructor(address _ottaAddress, address _ethAddress) {
     isLockingEpoch = true;
     ottaAddress = _ottaAddress;
     otta = IOtta(_ottaAddress);
+    eth = ERC20(_ethAddress);
   }
 
   /* =================== Functions ====================== */
-  receive() external payable {}
+  //receive() external payable {}
 
   /* =================== External Functions ====================== */
   /// @inheritdoc IBroker
@@ -56,7 +58,7 @@ contract Broker is IBroker {
     require(msg.sender == ottaAddress, "Only Otta");
     isLockingEpoch = epoch;
     if (isLockingEpoch) {
-      totalEthDividend = address(this).balance;
+      totalEthDividend = eth.balanceOf(address(this));
       brokerCounter = 0;
       periodCounterBroker += 1;
     }
@@ -85,9 +87,9 @@ contract Broker is IBroker {
     );
     receiveDividendBroker[_account][periodCounterBroker] = true;
     address payable _userAddress = payable(_account);
-    require(_userAddress != address(0), "zero address");
+    //require(_userAddress != address(0), "zero address");
     uint256 _dividendQuantity = totalEthDividend.div(brokerCounter);
-    _userAddress.transfer(_dividendQuantity);
+    eth.transfer(_userAddress, _dividendQuantity);
   }
 
   /// @notice Setting dividend contract address

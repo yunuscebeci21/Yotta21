@@ -34,28 +34,30 @@ contract Groups is IGroups {
   /// @notice Means the yotta dividend share right of the user within the period
   mapping(address => mapping(uint256 => bool)) public receiveDividendGroups;
   /// @notice Importing Dividend contract methods
-  mapping(string => Group) public infoGroup;
+  mapping(string => address) public infoGroup;
 
-  struct Group {
+  /*struct Group {
     address groupAddress;
-    bool groupStatus;
-    uint256 groupPercentage;
-  }
+    //bool groupStatus;
+    //uint256 groupPercentage;
+  }*/
 
   IDividend public dividend;
+  ERC20 public eth;
 
   /* =================== Constructor ====================== */
-  constructor(address _ottaAddress, address _timelockForOtta, address _timelockForMesh) {
+  constructor(address _ottaAddress, address _timelockForOtta, address _timelockForMesh, address _ethAddress) {
     isLockingEpoch = true;
     require(_ottaAddress != address(0), "Zero address");
     ottaAddress = _ottaAddress;
     timelockForOtta = _timelockForOtta;
     timelockForMesh = _timelockForMesh;
+    eth = ERC20(_ethAddress);
     setGroups();
   }
 
   /* =================== Functions ====================== */
-  receive() external payable {}
+  //receive() external payable {}
 
   /* =================== External Functions ====================== */
   /// @inheritdoc IGroups
@@ -67,8 +69,8 @@ contract Groups is IGroups {
     require(msg.sender == ottaAddress, "Only Otta");
     isLockingEpoch = epoch;
     if (isLockingEpoch) {
-      totalEthDividend = address(this).balance;
-      //groupCounter = 0;
+      totalEthDividend = eth.balanceOf(address(this));
+      groupCounter = 0;
       periodCounterGroups += 1;
     }
     return (isLockingEpoch, totalEthDividend);
@@ -77,14 +79,14 @@ contract Groups is IGroups {
   function lock(string memory _groupName) external {
     require(isLockingEpoch, "Not epoch");
     require(dividend.getPeriod() != 0, "not start");
-    require(infoGroup[_groupName].groupStatus, "not group");
+    //require(infoGroup[_groupName].groupStatus, "not group");
     require(
-      infoGroup[_groupName].groupAddress == msg.sender,
+      infoGroup[_groupName] == msg.sender,
       "not group address"
     );
     require(!locked[msg.sender][periodCounterGroups], "locked");
     locked[msg.sender][periodCounterGroups] = true;
-    //groupCounter += 1;
+    groupCounter += 1;
   }
 
   /// @notice calculates dividend amount of user
@@ -94,9 +96,9 @@ contract Groups is IGroups {
     override
   {
     require(!isLockingEpoch, "Not Dividend Epoch");
-    require(infoGroup[_groupName].groupStatus, "not group");
+    //require(infoGroup[_groupName].groupStatus, "not group");
     require(
-      infoGroup[_groupName].groupAddress == msg.sender,
+      infoGroup[_groupName] == msg.sender,
       "not group address"
     );
     require(locked[msg.sender][periodCounterGroups], "not locked");
@@ -108,14 +110,14 @@ contract Groups is IGroups {
     address payable _userAddress = payable(_account);
     require(_userAddress != address(0), "zero address");
     //uint256 _dividendQuantity = totalEthDividend.div(groupCounter);
-    uint256 _dividendQuantity = totalEthDividend.mul(
-      (infoGroup[_groupName].groupPercentage).div(100)
+    uint256 _dividendQuantity = totalEthDividend.mul(groupCounter
+      //(infoGroup[_groupName].groupPercentage).div(100)
     );
-    _userAddress.transfer(_dividendQuantity);
+    eth.transfer(_userAddress, _dividendQuantity);
   }
 
   // kilitlemek(feshetmek) için delegator call eder, feshetmek için koordinatör call eder
-  function setGroupStatus(string memory _groupName, bool _status)
+  /*function setGroupStatus(string memory _groupName, bool _status)
     external
     override
   {
@@ -124,37 +126,33 @@ contract Groups is IGroups {
       "only timelock for otta dao"
     );
     infoGroup[_groupName].groupStatus = _status;
-  }
+  }*/
 
   function setGroupAddress(string memory _groupName, address _groupAddress)
     external
     override
   {
-    require(msg.sender == timelockForMesh, "only timelock for nft dao");
-    require(_groupAddress!=address(0), "zero address");
-    infoGroup[_groupName].groupAddress = _groupAddress;
+    require(msg.sender == timelockForOtta || msg.sender == timelockForMesh, "only timelock for nft dao");
+    //require(_groupAddress!=address(0), "zero address");
+    infoGroup[_groupName] = _groupAddress;
   }
 
-  function setGroupPercentage(string memory _groupName, uint256 _groupPercentage)
+  /*function setGroupPercentage(string memory _groupName, uint256 _groupPercentage)
     external
     override
   {
     require(msg.sender == timelockForMesh, "only timelock for nft dao");
     require(_groupPercentage > 0 && _groupPercentage < 35, "not range");
     infoGroup[_groupName].groupPercentage = _groupPercentage;
-  }
+  }*/
 
   function addGroup(
     string memory _groupName,
-    address _groupAddress,
-    uint256 _groupPercentage
+    address _groupAddress
+    //uint256 _groupPercentage
   ) external override {
     require(msg.sender == timelockForMesh, "only timelock");
-    Group memory _newGroup;
-    _newGroup.groupAddress = _groupAddress;
-    _newGroup.groupStatus = true;
-    _newGroup.groupPercentage = _groupPercentage;
-    infoGroup[_groupName] = _newGroup;
+    infoGroup[_groupName] = _groupAddress;
   }
 
   /* =================== Public Functions ====================== */
@@ -167,36 +165,22 @@ contract Groups is IGroups {
   }
 
   function setGroups() internal {
-    Group memory _groupFinance;
-    Group memory _groupOperation;
-    Group memory _groupMarketing;
-    Group memory _groupEngineering;
-    Group memory _groupCommunity;
 
-    _groupFinance.groupAddress = 0x67E164b59C44308330E8F57D8b29A6ba81d5c628; // newprotocoltest
-    _groupFinance.groupStatus = true;
-    _groupFinance.groupPercentage = 20;
-    infoGroup["Finance"] = _groupFinance;
+    infoGroup["Finance"] = 0x67E164b59C44308330E8F57D8b29A6ba81d5c628;
 
-    _groupOperation.groupAddress = 0x9E06e6B41C0E82F86f858d93e7D79cF324e4fC07; // Account1
-    _groupOperation.groupStatus = true;
-    _groupOperation.groupPercentage = 20;
-    infoGroup["Operation"] = _groupOperation;
+    infoGroup["Operation"] = 0x9E06e6B41C0E82F86f858d93e7D79cF324e4fC07;
     
-    _groupMarketing.groupAddress = 0xFc3408640D0c34F2d6C0cb68cd5082eDd3df8FCb; // TestAccount
-    _groupMarketing.groupStatus = true;
-    _groupMarketing.groupPercentage = 20;
-    infoGroup["Marketing"] = _groupMarketing;
+    infoGroup["Marketing"] = 0xFc3408640D0c34F2d6C0cb68cd5082eDd3df8FCb;
 
-    _groupEngineering.groupAddress = 0x940e57183Ef2Ae8355C81Af26c2Ca37F9F0d8D5b; // TestAccount2
-    _groupEngineering.groupStatus = true;
-    _groupEngineering.groupPercentage = 20;
-    infoGroup["Engineering"] = _groupEngineering;
+    infoGroup["Engineering"] = 0x940e57183Ef2Ae8355C81Af26c2Ca37F9F0d8D5b;
 
-    _groupCommunity.groupAddress = 0x19139cAeA6934f639DacFf6feC59b11876F4AF74; // TestAccount3
-    _groupCommunity.groupStatus = true;
-    _groupCommunity.groupPercentage = 20;
-    infoGroup["Community"] = _groupCommunity;
+    infoGroup["Community"] = 0x19139cAeA6934f639DacFf6feC59b11876F4AF74;
+
+    infoGroup["ExOne"] = 0x19139cAeA6934f639DacFf6feC59b11876F4AF74;
+
+    infoGroup["ExTwo"] = 0x19139cAeA6934f639DacFf6feC59b11876F4AF74;
+
+    infoGroup["ExThree"] = 0x19139cAeA6934f639DacFf6feC59b11876F4AF74;
   }
 
 }

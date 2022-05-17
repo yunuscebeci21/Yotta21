@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import { IUniswapV2Pool } from "./external/IUniswapV2Pool.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { IWeth } from "./external/IWeth.sol";
+//import { IWeth } from "./external/IWeth.sol";
 import { IPrice } from "./interfaces/IPrice.sol";
 
 contract Price is IPrice {
@@ -55,7 +55,7 @@ contract Price is IPrice {
   /// @notice Map of components univ2
   mapping(address => address) private componentsUniPools;
   /// @notice Importing weth methods
-  IWeth public weth;
+  ERC20 public weth;
 
   /* ================ Modifier ================== */
   /// @notice Throws if the sender is not owner
@@ -75,7 +75,7 @@ contract Price is IPrice {
   ) {
     owner = msg.sender;
     require(_weth != address(0), "Zero address");
-    weth = IWeth(_weth);
+    weth = ERC20(_weth);
     wethAddress = _weth;
     require(_ttffUniPool != address(0), "Zero address");
     ttffUniPool = _ttffUniPool;

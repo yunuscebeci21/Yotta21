@@ -8,7 +8,7 @@ import {ITTFFPool} from "./interfaces/ITTFFPool.sol";
 import {IUniswapV2Pool} from "./external/IUniswapV2Pool.sol";
 import {IUniswapV2Adapter} from "./interfaces/IUniswapV2Adapter.sol";
 import {IPrice} from "./interfaces/IPrice.sol";
-import {IWeth} from "./external/IWeth.sol";
+//import {IWeth} from "./external/IWeth.sol";
 
 contract UniswapV2Adapter is IUniswapV2Adapter {
     using SafeMath for uint256;
@@ -63,7 +63,7 @@ contract UniswapV2Adapter is IUniswapV2Adapter {
     /// @notice Importing Price contract interface
     IPrice public price;
     /// @notice Importing Weth contract interface
-    IWeth public weth;
+    ERC20 public weth;
 
     /* ================ Modifier ================== */
     /// @notice Throws if the sender is not owner
@@ -85,7 +85,7 @@ contract UniswapV2Adapter is IUniswapV2Adapter {
         router02Address = _router02;
         require(_weth != address(0), "zero address");
         wethAddress = _weth;
-        weth = IWeth(wethAddress);
+        weth = ERC20(wethAddress);
         require(_ttff != address(0), "zero address");
         ttff = _ttff;
         require(_uniswapTtfPool != address(0), "zero address");

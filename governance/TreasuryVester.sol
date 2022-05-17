@@ -50,6 +50,7 @@ contract TreasuryVester {
     otta = otta_;
     recipient = recipient_;
     swapRouter = IUniswapV2Router02(swapRouter_);
+    swapRouterAddress = swapRouter_;
 
     vestingAmount = vestingAmount_;
     vestingBegin = vestingBegin_;
@@ -76,15 +77,17 @@ contract TreasuryVester {
     IOtta(otta).transfer(recipient, amount);
   }
   
+  // Timelock tarafından tetiklenen bir satış işlemi olmayacak*****
+
   /* otta nın şu yüzdesini sat mı yoksa otta nın şu miktarını sat???????????? */
-  function sellToToken(uint256 _amount, address _sellToken, address _buyToken) external {
+  /*function sellToToken(uint256 _amount, address _sellToken, address _buyToken) external {
     require(msg.sender == recipient, "only otta timelock");
     //uint256 _amount = ottaToken.balanceOf(address(this)).mul(_percentage).div(100);
     approveComponents(_sellToken, _buyToken);
     sell(_amount, _sellToken, _buyToken);
-  }
+  }*/
 
-  function approveComponents(address _sellToken, address _buyToken) internal {
+  /*function approveComponents(address _sellToken, address _buyToken) public {
     // sell ve buy için allowance kontrolü yap!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ERC20 buyToken = ERC20(_buyToken);
     ERC20 sellToken = ERC20(_sellToken);
@@ -95,9 +98,9 @@ contract TreasuryVester {
     //if(_allowances[swapRouterAddress][sellToken] == 0){
       sellToken.approve(swapRouterAddress, MAX_INT);
     //}
-  }
+  }*/
 
-   function sell(uint256 _amount, address _sellToken, address _buyToken) internal {
+  /*function sell(uint256 _amount, address _sellToken, address _buyToken) public {
     address[] memory _path = new address[](2);
     _path[0] = _sellToken;
     _path[1] = _buyToken;
@@ -108,7 +111,7 @@ contract TreasuryVester {
       address(this),
       block.timestamp + DEADLINE
     );
-  }
+  }*/
 
 }
 

@@ -33,7 +33,7 @@ contract ProtocolVault is IProtocolVault {
   bool public isEthPoolSetted;
   bool public isProtocolGradualSetted;
   // Importing wrapped ether methods
-  IWeth public weth;
+  ERC20 public weth;
   // importing eth pool methods
   IEthereumPool public ethPool;
 
@@ -61,24 +61,25 @@ contract ProtocolVault is IProtocolVault {
     owner = msg.sender;
     require(_weth != address(0), "Zero address");
     wethAddress = _weth;
-    weth = IWeth(wethAddress);
+    weth = ERC20(wethAddress);
     require(_LPTTFFAddress != address(0), "Zero address");
     LPTTFFAddress = _LPTTFFAddress;
   }
 
   /*================= Functions=================*/
-  receive() external payable {}
+  //receive() external payable {}
 
   /*================= External Functions=================*/
   /// @inheritdoc IProtocolVault
-  function withdraw(address payable _account, uint256 _withdrawAmount)
+  function withdraw(address _account, uint256 _withdrawAmount)
     external
     override
     onlyProtocolContracts
     returns (bool state)
   {
-    weth.withdraw(_withdrawAmount);
-    _account.transfer(_withdrawAmount);
+    //weth.withdraw(_withdrawAmount);
+    //_account.transfer(_withdrawAmount);
+    weth.transfer(_account, _withdrawAmount);
     emit WithdrawToAccount(_account, _withdrawAmount);
     return (true);
   }

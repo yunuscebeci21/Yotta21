@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { IDividend } from "./interfaces/IDividend.sol";
+import { ILPTrade } from "./interfaces/ILPTrade.sol";
 import { ILockedOttaMesh } from "./interfaces/ILockedOttaMesh.sol";
 
 /// @title Dividend
@@ -59,6 +60,7 @@ contract Dividend is IDividend {
   mapping(address => mapping(uint256 => bool)) public receiveDividend;
   /// @notice Importing Otta token methods
   ERC20 public ottaToken;
+  ERC20 public eth;
   ///
   ILockedOttaMesh public mesh;
 
@@ -69,7 +71,8 @@ contract Dividend is IDividend {
     address _lockedOttaTeam,
     address _lockedOttaBroker,
     address _lockedOttaMeshNFT,
-    address _lockedOttaMesh
+    address _lockedOttaMesh,
+    address _ethAddress
   ) {
     owner = msg.sender;
     //isLockingEpoch = false;
@@ -83,16 +86,12 @@ contract Dividend is IDividend {
     lockedOttaMeshNFT = _lockedOttaMeshNFT;
     lockedOttaMesh = _lockedOttaMesh;
     mesh = ILockedOttaMesh(_lockedOttaMesh);
-    LPTrade memory lpTrade;
-    lpTrade.lpTradeAddress = 0x9E06e6B41C0E82F86f858d93e7D79cF324e4fC07;
-    lpTrade.percentage = 40;
-    lpTrade.isActive = true;
-    arrayLPTrade.push(lpTrade);
-    controlOfLPTradePercentage();
+    eth = ERC20(_ethAddress);
+    firstLPTrade();
   }
 
   /* =================== Functions ====================== */
-  receive() external payable {}
+  //receive() external payable {}
 
   /* =================== External Functions ====================== */
   /// @inheritdoc IDividend
@@ -104,13 +103,16 @@ contract Dividend is IDividend {
     require(msg.sender == ottaTokenAddress, "Only Otta");
     isLockingEpoch = epoch;
     if (isLockingEpoch) {
-      totalEthDividend = address(this).balance;
+      totalEthDividend = eth.balanceOf(address(this));
       uint preEthDividend;
       for(uint i=0; i<arrayLPTrade.length; i++){
         if(arrayLPTrade[i].isActive){ // yatırımların yüzdelerinin toplamı %80 den az %0 den fazla olamaz
+          ILPTrade lpTrade = ILPTrade(arrayLPTrade[i].lpTradeAddress);
           uint256 _amountToLpTrade = totalEthDividend.mul(arrayLPTrade[i].percentage).div(100);
           preEthDividend = preEthDividend.add(_amountToLpTrade);
-          payable(arrayLPTrade[i].lpTradeAddress).transfer(_amountToLpTrade);
+          //payable(arrayLPTrade[i].lpTradeAddress).transfer(_amountToLpTrade);
+          eth.transfer(arrayLPTrade[i].lpTradeAddress, _amountToLpTrade);
+          lpTrade.trade();
         } 
       }
       totalEthDividend = totalEthDividend.sub(preEthDividend); // min %20 olmalı 
@@ -161,12 +163,12 @@ contract Dividend is IDividend {
     require(locked[_account] != 0, "Locked Otta not found");
     require(!receiveDividend[_account][periodCounter], "Already received");
     address payable _userAddress = payable(_account);
-    require(_userAddress != address(0), "zero address");
+    //require(_userAddress != address(0), "zero address");
     receiveDividend[_account][periodCounter] = true;
     uint256 _ottaQuantity = locked[_account];
     uint256 _percentage = (_ottaQuantity.mul(10**18)).div(totalLockedOtta);
     uint256 _dividendQuantity = (_percentage.mul(totalEthDividend)).div(10**18);
-    _userAddress.transfer(_dividendQuantity);
+    eth.transfer(_userAddress, _dividendQuantity);
   }
 
   /// @notice Transfers locked Otta token and dividend to user
@@ -175,14 +177,14 @@ contract Dividend is IDividend {
     require(locked[_account] != 0, "Locked Otta not found");
     require(!receiveDividend[_account][periodCounter], "Already received");
     address payable _userAddress = payable(_account);
-    require(_userAddress != address(0), "zero address");
+    //require(_userAddress != address(0), "zero address");
     receiveDividend[_account][periodCounter] = true;
     uint256 _ottaQuantity = locked[_account];
     locked[_account] = 0;
     walletCounter -= 1;
     uint256 _percentage = (_ottaQuantity.mul(10**18)).div(totalLockedOtta);
     uint256 _dividendQuantity = (_percentage.mul(totalEthDividend)).div(10**18);
-    _userAddress.transfer(_dividendQuantity);
+    eth.transfer(_userAddress, _dividendQuantity);
     bool success = ottaToken.transfer(_account, _ottaQuantity);
     require(success, "transfer failed");
   }
@@ -203,13 +205,13 @@ contract Dividend is IDividend {
     walletCounter -= 3;
     uint256 _percentageForTeam = (_ottaQuantityTeam.mul(10**18)).div(totalLockedOtta);
     uint256 _dividendQuantityForTeam = (_percentageForTeam.mul(totalEthDividend)).div(10**18);
-    _teamAddress.transfer(_dividendQuantityForTeam);
+    eth.transfer(_teamAddress, _dividendQuantityForTeam);
     uint256 _percentageForBroker = (_ottaQuantityBroker.mul(10**18)).div(totalLockedOtta);
     uint256 _dividendQuantityForBroker = (_percentageForBroker.mul(totalEthDividend)).div(10**18);
-    _brokerAddress.transfer(_dividendQuantityForBroker);
+    eth.transfer(_brokerAddress, _dividendQuantityForBroker);
     uint256 _percentageForMeshNFT = (_ottaQuantityMeshNFT.mul(10**18)).div(totalLockedOtta);
     uint256 _dividendQuantityForMeshNFT = (_percentageForMeshNFT.mul(totalEthDividend)).div(10**18);
-    _meshNFTAddress.transfer(_dividendQuantityForMeshNFT);
+    eth.transfer(_meshNFTAddress, _dividendQuantityForMeshNFT);
   }
 
   /// @inheritdoc IDividend
@@ -227,9 +229,9 @@ contract Dividend is IDividend {
     uint256 _dividendQuantityForDelegator = _dividendQuantity.mul(mesh.getMeshPercentage("Delegator").div(100));
     uint256 _dividendQuantityForCoordinator = _dividendQuantity.mul(mesh.getMeshPercentage("Coordinator").div(100));
     uint256 _dividendQuantityForGroups = _dividendQuantity.mul(mesh.getMeshPercentage("Groups").div(100));
-    _delegatorAddress.transfer(_dividendQuantityForDelegator);
-    _coordinatorAddress.transfer(_dividendQuantityForCoordinator);
-    _groupsAddress.transfer(_dividendQuantityForGroups);
+    eth.transfer(_delegatorAddress, _dividendQuantityForDelegator);
+    eth.transfer(_coordinatorAddress, _dividendQuantityForCoordinator);
+    eth.transfer(_groupsAddress, _dividendQuantityForGroups);
   }
   
   /// @inheritdoc IDividend
@@ -300,5 +302,14 @@ contract Dividend is IDividend {
     require(totalPercentage>=0 && totalPercentage<=80, "out of lp investment range");
     return true;
   }
+
+  function firstLPTrade() internal {
+    LPTrade memory lpTrade;
+    lpTrade.lpTradeAddress = 0x9E06e6B41C0E82F86f858d93e7D79cF324e4fC07;
+    lpTrade.percentage = 50;
+    lpTrade.isActive = true;
+    arrayLPTrade.push(lpTrade);
+    controlOfLPTradePercentage();
+  } 
 
 }

@@ -36,21 +36,23 @@ contract Team is ITeam {
   mapping(address => mapping(uint256 => bool)) public receiveDividendYotta;
   /// @notice Importing Yotta token methods
   ERC20 public yotta;
+  ERC20 public eth;
   /// @notice Importing Dividend contract methods
   IDividend public dividend;
 
   /* =================== Constructor ====================== */
-  constructor(address _ottaAddress, address _yottaAddress) {
+  constructor(address _ottaAddress, address _yottaAddress, address _ethAddress) {
     isLockingEpoch = true;
     require(_ottaAddress != address(0), "Zero address");
     ottaAddress = _ottaAddress;
     require(_yottaAddress != address(0), "Zero address");
     yottaAddress = _yottaAddress;
     yotta = ERC20(yottaAddress);
+    eth = ERC20(_ethAddress);
   }
 
   /* =================== Functions ====================== */
-  receive() external payable {}
+  //receive() external payable {}
 
   /* =================== External Functions ====================== */
   /// @inheritdoc ITeam
@@ -62,7 +64,7 @@ contract Team is ITeam {
     require(msg.sender == ottaAddress, "Only Otta");
     isLockingEpoch = epoch;
     if (isLockingEpoch) {
-      totalEthDividend = address(this).balance;
+      totalEthDividend = eth.balanceOf(address(this));
       totalLockedYotta = yotta.balanceOf(address(this));
       periodCounterYotta += 1;
     }
@@ -91,12 +93,12 @@ contract Team is ITeam {
       "Already received"
     );
     address payable _userAddress = payable(_account);
-    require(_userAddress != address(0), "zero address");
+    //require(_userAddress != address(0), "zero address");
     receiveDividendYotta[_account][periodCounterYotta] = true;
     uint256 _yottaQuantity = locked[_account];
     uint256 _percentage = (_yottaQuantity.mul(10**18)).div(totalLockedYotta);
     uint256 _dividendQuantity = (_percentage.mul(totalEthDividend)).div(10**18);
-    _userAddress.transfer(_dividendQuantity);
+    eth.transfer(_userAddress, _dividendQuantity);
   }
 
   /// @notice Transfers locked Yotta token and dividend to user
@@ -108,14 +110,14 @@ contract Team is ITeam {
       "Already received"
     );
     address payable _userAddress = payable(_account);
-    require(_userAddress != address(0), "zero address");
+    //require(_userAddress != address(0), "zero address");
     receiveDividendYotta[_account][periodCounterYotta] = true;
     uint256 _yottaQuantity = locked[_account];
     locked[_account] = 0;
     walletCounter -= 1;
     uint256 _percentage = (_yottaQuantity.mul(10**18)).div(totalLockedYotta);
     uint256 _dividendQuantity = (_percentage.mul(totalEthDividend)).div(10**18);
-    _userAddress.transfer(_dividendQuantity);
+    eth.transfer(_account, _dividendQuantity);
     bool success = yotta.transfer(_account, _yottaQuantity);
     require(success, "transfer failed");
   }

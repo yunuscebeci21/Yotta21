@@ -34,17 +34,19 @@ contract Delegator is IDelegator {
   ICurrentVotes public meshVotes;
   ICurrentVotes public ottaVotes;
   IDividend public dividend;
+  ERC20 public eth;
 
   /* =================== Constructor ====================== */
-  constructor(address _ottaAddress, address _meshAddress) {
+  constructor(address _ottaAddress, address _meshAddress, address _ethAddress) {
     isLockingEpoch = true;
     ottaAddress = _ottaAddress;
     ottaVotes = ICurrentVotes(_ottaAddress);
     meshVotes = ICurrentVotes(_meshAddress);
+    eth = ERC20(_ethAddress);
   }
 
   /* =================== Functions ====================== */
-  receive() external payable {}
+  //receive() external payable {}
 
   /* =================== External Functions ====================== */
   /// @inheritdoc IDelegator
@@ -56,7 +58,7 @@ contract Delegator is IDelegator {
     require(msg.sender == ottaAddress, "Only Otta");
     isLockingEpoch = epoch;
     if (isLockingEpoch) {
-      totalEthDividend = address(this).balance;
+      totalEthDividend = eth.balanceOf(address(this));
       delegatorCounter = 0;
       periodCounterDelegator += 1;
     }
@@ -68,8 +70,8 @@ contract Delegator is IDelegator {
     require(isLockingEpoch, "Not epoch");
     require(dividend.getPeriod() != 0, "not start");
     require(
-      ottaVotes.getCurrentVotes(msg.sender) == 20*10**18 &&
-        meshVotes.getCurrentVotes(msg.sender) == 0,
+      ottaVotes.getCurrentVotes(msg.sender) == 150000*10**18,
+        //meshVotes.getCurrentVotes(msg.sender) == 0,
       "not delegator"
     );
     require(!locked[msg.sender][periodCounterDelegator], "locked");
@@ -83,8 +85,8 @@ contract Delegator is IDelegator {
     require(!isLockingEpoch, "Not Dividend Epoch");
     require(locked[_account][periodCounterDelegator], "not locked");
     require(
-      ottaVotes.getCurrentVotes(_account) == 20*10**18 &&
-        meshVotes.getCurrentVotes(_account) == 0,
+      ottaVotes.getCurrentVotes(_account) == 150000*10**18,
+        //meshVotes.getCurrentVotes(_account) == 0,
       "not delegator"
     );
     require(
@@ -92,10 +94,10 @@ contract Delegator is IDelegator {
       "Already received"
     );
     address payable _userAddress = payable(_account);
-    require(_userAddress != address(0), "zero address");
+    //require(_userAddress != address(0), "zero address");
     receiveDividendDelegator[_account][periodCounterDelegator] = true;
     uint256 _dividendQuantity = totalEthDividend.div(delegatorCounter);
-    _userAddress.transfer(_dividendQuantity);
+    eth.transfer(_userAddress, _dividendQuantity);
   }
 
   /// @notice Setting dividend contract address
