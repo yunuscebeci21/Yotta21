@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { ILPTTFF } from "./interfaces/ILPTTFF.sol";
@@ -36,6 +37,8 @@ contract LPTTFF is
   address public dividendAddress;
   /// @notice Address of the Ethereum Pool
   address public ethPoolAddress;
+  address public protocolVaultAddress;
+  address public protocolGradualAddress;
   /// @notice Address of contract creator
   address public ownerAddress;
   address public timelockForMesh;
@@ -58,6 +61,7 @@ contract LPTTFF is
   bool public isPriceSetted;
   bool public isProtocolVaultSetted;
   bool public isEthPoolSetted;
+  bool public guardianStatus;
   /// @notice Allowance amounts on behalf of others
   mapping(address => mapping(address => uint256)) private _allowances;
   /// @notice Official record of token balances for each account
@@ -101,6 +105,7 @@ contract LPTTFF is
   /// @notice Function called when taum token sale is made to the system
   /// @param _taumAmount Quantity of taum token. It must be wei type (10**18)
   function receiver(uint256 _taumAmount) external {
+    require(!guardianStatus, "");
     address _userAddress = msg.sender;
     uint256 accountBalance = _balances[msg.sender];
     require(
@@ -114,6 +119,29 @@ contract LPTTFF is
     bool statusInvestment = protocolVault.withdraw(_userAddress, _ethAmount);
     require(statusInvestment, "Insufficient ether");
     _burn(address(this), _taumAmount);
+  }
+
+   function receiverFromGuardian(uint256 _taumAmount) external {
+    require(guardianStatus, "");
+    address _userAddress = msg.sender;
+    uint256 accountBalance = _balances[msg.sender];
+    require(
+      accountBalance >= _taumAmount,
+      "ERC20: burn amount exceeds balance"
+    );
+    bool successTransfer = transfer(address(this), _taumAmount);
+    require(successTransfer, "Transfer failed");
+    ERC20 token = ERC20(protocolVault.getTokenAddress());
+    uint256 _taumPrice = (token.balanceOf(protocolVaultAddress)).div(totalSupply()).mul(10**18);
+    uint256 _ethAmount = _taumAmount.mul(_taumPrice).div(10**18);
+    bool statusInvestment = protocolVault.withdraw(_userAddress, _ethAmount);
+    require(statusInvestment, "Insufficient ether");
+    _burn(address(this), _taumAmount);
+  }
+
+  function setGuardianStatus(bool _status) external override {
+    require(msg.sender == protocolGradualAddress, "");
+    guardianStatus = _status;
   }
 
   function setYearlyValue(uint256 _yearlyValue) external {
@@ -172,10 +200,24 @@ contract LPTTFF is
     require(!isProtocolVaultSetted, "Already setted");
     require(_protocolVaultAddress != address(0), "Zero address");
     isProtocolVaultSetted = true;
+    protocolVaultAddress = _protocolVaultAddress;
     protocolVault = IProtocolVault(_protocolVaultAddress);
     emit ProtocolVaultSetted(_protocolVaultAddress);
     return (_protocolVaultAddress);
   }
+
+  function setProtocolGradual(address _protocolGradualAddress)
+    public
+    onlyOwner
+    returns (address)
+  {
+    //require(!isProtocolGradualSetted, "Already setted");
+    //require(_protocolGradualAddress != address(0), "Zero address");
+    //isProtocolGradualSetted = true;
+    protocolGradualAddress = _protocolGradualAddress;
+    return (_protocolGradualAddress);
+  }
+
 
   /// @notice Setting ethereum pool contract address
   /// @param _ethPoolAddress The ethereum pool contract address.

@@ -4,9 +4,10 @@ pragma solidity ^0.8.0;
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { ISetToken } from "../external/ISetToken.sol";
 import { ITradeModule } from "../external/ITradeModule.sol";
+import { ITimelock } from "../interfaces/ITimelock.sol";
 
 
-contract Timelock {
+contract Timelock is ITimelock{
   using SafeMath for uint256;
 
   event NewAdmin(address indexed newAdmin);
@@ -44,9 +45,10 @@ contract Timelock {
 
   address public admin;
   address public owner;
-  address public emergencyWalletAddress;
+  address public guardianWalletAddress;
   address public ttffAddress;
   address public pendingAdmin;
+  address public tokenAddress;
   uint256 public delay;
 
   bool public isFirstAdminSetted;
@@ -55,7 +57,7 @@ contract Timelock {
 
   ITradeModule public tradeModule;
 
-  constructor(uint256 delay_, address _tradeModule) {
+  constructor(uint256 delay_, address _tradeModule, address _tokenAddress) {
     require(
       delay_ >= MINIMUM_DELAY,
       "Timelock::constructor: Delay must exceed minimum delay."
@@ -68,6 +70,7 @@ contract Timelock {
     owner = msg.sender;
     delay = delay_;
     tradeModule = ITradeModule(_tradeModule);
+    tokenAddress = _tokenAddress;
   }
 
   receive() external payable {}
@@ -79,11 +82,20 @@ contract Timelock {
         address _receiveToken,
         uint256 _minReceiveQuantity,
         bytes calldata _data) external {
-    require(msg.sender == address(this) || msg.sender == emergencyWalletAddress, "Only Timelock or Emergency Wallet");
+    require(msg.sender == address(this) || msg.sender == guardianWalletAddress, "Only Timelock or Guardian Wallet");
     // multiwallet otta timelock tarafından set edilebilir olucak
     // timelock contract'ında ttff set fonksiyonu olmalı 
     ISetToken _ttff = ISetToken(_setToken);
-    tradeModule.trade(_ttff,
+    if(msg.sender==guardianWalletAddress){
+      tradeModule.trade(_ttff,
+                      _exchangeName,
+                      _sendToken,
+                      _sendQuantity,
+                      tokenAddress,
+                      _minReceiveQuantity,
+                      _data);
+    }else if(msg.sender == address(this)){
+       tradeModule.trade(_ttff,
                       _exchangeName,
                       _sendToken,
                       _sendQuantity,
@@ -91,7 +103,7 @@ contract Timelock {
                       _minReceiveQuantity,
                       _data);
     }
-
+  }
 
   function setFirstAdmin(address admin_) public {
     require(msg.sender==owner, "only owner");
@@ -101,9 +113,22 @@ contract Timelock {
     emit NewAdmin(admin);
   }
 
-  function setEmergencyWallet(address _newEmergencyWalletAddress) public {
+  function setGuardianWallet(address _newGuardianWalletAddress) public {
     require(msg.sender==address(this),"only this address");
-    emergencyWalletAddress = _newEmergencyWalletAddress;
+    guardianWalletAddress = _newGuardianWalletAddress;
+  }
+
+  function getGuardianWallet() external view override returns(address){
+    return guardianWalletAddress;
+  }
+
+  function setTokenAddress(address _newTokenAddress) public {
+    require(msg.sender==address(this),"only this address");
+    tokenAddress = _newTokenAddress;
+  }
+
+  function getTokenAddress() external view override returns(address){
+    return tokenAddress;
   }
 
   function setTTFF(address _ttffAddress) public {

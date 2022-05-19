@@ -5,6 +5,8 @@ import { IWeth } from "./external/IWeth.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IProtocolVault } from "./interfaces/IProtocolVault.sol";
 import { IEthereumPool } from "./interfaces/IEthereumPool.sol";
+import { IUniswapV2Router02 } from "./external/IUniswapV2Router02.sol";
+import { ITimelock } from "./interfaces/ITimelock.sol";
 
 /// @title ProtocolVault
 /// @author Yotta21
@@ -29,6 +31,11 @@ contract ProtocolVault is IProtocolVault {
   address public LPTTFFAddress;
   // address of price contract
   address public priceAddress;
+  address public swapRouterAddress;
+
+  uint256 public constant MAX_INT = 2**256 - 1;
+  uint256 public constant DEADLINE = 5 hours;
+
   // set state of protocol vault
   bool public isEthPoolSetted;
   bool public isProtocolGradualSetted;
@@ -36,6 +43,9 @@ contract ProtocolVault is IProtocolVault {
   ERC20 public weth;
   // importing eth pool methods
   IEthereumPool public ethPool;
+  IUniswapV2Router02 public swapRouter;
+  ITimelock public timelock;
+
 
   /*============ Modifiers ================ */
   /// @notice Throws if the sender is not LPTTFF or ProtocolGradual
@@ -57,13 +67,16 @@ contract ProtocolVault is IProtocolVault {
   }
 
   /*============ Constructor ================ */
-  constructor(address _weth, address _LPTTFFAddress) {
+  constructor(address _weth, address _LPTTFFAddress, address _swapRouterAddress, address _timelock) {
     owner = msg.sender;
     require(_weth != address(0), "Zero address");
     wethAddress = _weth;
     weth = ERC20(wethAddress);
     require(_LPTTFFAddress != address(0), "Zero address");
     LPTTFFAddress = _LPTTFFAddress;
+    swapRouterAddress = _swapRouterAddress;
+    swapRouter = IUniswapV2Router02(_swapRouterAddress);
+    timelock = ITimelock(_timelock);
   }
 
   /*================= Functions=================*/
@@ -92,6 +105,35 @@ contract ProtocolVault is IProtocolVault {
     ethPool.addLimit(_amount);
     emit PoolFeeded(ethPoolAddress, _amount);
     return true;
+  }
+
+  function setTokenAddress() external override {
+    require(msg.sender==protocolGradualAddress);
+    weth = ERC20(timelock.getTokenAddress());
+  }
+
+  function getTokenAddress() external view override returns(address){
+    return wethAddress;
+  }
+
+  function approveComponents() public {
+    ERC20 token = ERC20(timelock.getTokenAddress());
+    weth.approve(swapRouterAddress, MAX_INT);
+    token.approve(swapRouterAddress, MAX_INT);
+  }
+
+  function toExchange() external override {
+    require(msg.sender==protocolGradualAddress);
+    address[] memory _path = new address[](2);
+    _path[0] = wethAddress;
+    _path[1] = timelock.getTokenAddress();
+    swapRouter.swapExactTokensForTokens(
+      weth.balanceOf(address(this)),
+      0,
+      _path,
+      address(this),
+      block.timestamp + DEADLINE
+    );
   }
 
   /*================= Public Functions=================*/

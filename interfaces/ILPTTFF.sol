@@ -6,4 +6,5 @@ interface ILPTTFF {
    /// @notice Function to call before _mint functions
    /// @dev Can only call EthereumPool contract
    function tokenMint(address _recipient, uint256 _amount) external;
+   function setGuardianStatus(bool _status) external;
 }

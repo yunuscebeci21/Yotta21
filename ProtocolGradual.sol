@@ -13,6 +13,9 @@ import { ITradeFromUniswapV2 } from "./interfaces/ITradeFromUniswapV2.sol";
 import { IPrice } from "./interfaces/IPrice.sol";
 import { IUniswapV2Pool } from "./external/IUniswapV2Pool.sol";
 import { KeeperCompatibleInterface } from "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
+import { ITimelock } from "./interfaces/ITimelock.sol";
+import { ILPTTFF } from "./interfaces/ILPTTFF.sol";
+
 
 contract ProtocolGradual is KeeperCompatibleInterface {
   using SafeMath for uint256;
@@ -69,6 +72,7 @@ contract ProtocolGradual is KeeperCompatibleInterface {
   /// @notice Set status of this contract
   bool public isEthPoolSetted;
   bool public isPriceSetted;
+  bool public guardianStatus;
   /// @notice Importing trade methods
   ITradeFromUniswapV2 public trade;
   /// @notice Importing UniswapV2Adapter methods
@@ -81,6 +85,11 @@ contract ProtocolGradual is KeeperCompatibleInterface {
   ITTFFPool public ttffPool;
   /// @notice Importing Price methods
   IPrice public price;
+
+  ITimelock public timelock;
+
+  ILPTTFF public lpttff;
+
   /// @notice Importing weth methods
   ERC20 public weth;
 
@@ -99,7 +108,9 @@ contract ProtocolGradual is KeeperCompatibleInterface {
     address _tradeAddress,
     address _wethAddress,
     address _ttffUniPool,
-    address _ttff
+    address _ttff,
+    address _timelock,
+    address _lpttff
   ) {
     owner = msg.sender;
     require(_protocolVaultAddress != address(0), "Zero address");
@@ -119,6 +130,8 @@ contract ProtocolGradual is KeeperCompatibleInterface {
     require(_ttffUniPool != address(0), "zero address");
     ttffUniPool = _ttffUniPool;
     ttff = _ttff;
+    timelock = ITimelock(_timelock);
+    lpttff = ILPTTFF(_lpttff);
     value1 = 0;
     value2 = 10 * 10**18;
     value3 = 20 * 10**18;
@@ -154,6 +167,16 @@ contract ProtocolGradual is KeeperCompatibleInterface {
       (_percent > value2 && _percent <= value3) ||
       (_percent > value4);
     performData = checkData;
+  }
+
+  function setGuardianStatus(bool _status) external{
+    require(msg.sender == timelock.getGuardianWallet());
+    guardianStatus = _status;
+    if(guardianStatus){
+      guardian();
+    }else{
+      lpttff.setGuardianStatus(false);
+    }
   }
 
   /*=============== Public Functions =====================*/
@@ -222,6 +245,7 @@ contract ProtocolGradual is KeeperCompatibleInterface {
   /// @dev redeemTTFF() : Existing ttffs are reedem
   /// @dev feedVault() : 100% of Ethereum Pool is transferred to Vault
   function processValue1ToValue2() internal returns (bool) {
+    require(!guardianStatus, "emergency is start");
     uniV2Adapter.removeLiquidity(removePercentage1);
     trade.redeemTTFF();
     uint256 _amount = weth.balanceOf(ethPoolAddress);
@@ -236,6 +260,7 @@ contract ProtocolGradual is KeeperCompatibleInterface {
   /// @dev redeemTTFF() : Existing ttffs are reedem
   /// @dev feedVault() : 100% of Eth Pool is transferred to Vault
   function processValue2ToValue3() internal returns (bool) {
+    require(!guardianStatus, "emergency is start");
     uniV2Adapter.removeLiquidity(removePercentage2);
     trade.redeemTTFF();
     uint256 _amount = weth.balanceOf(ethPoolAddress);
@@ -248,6 +273,7 @@ contract ProtocolGradual is KeeperCompatibleInterface {
   /// @notice Triggers to occur in the range of 30 - >:
   /// @dev feedPool() : _newPercent of Eth Pool is transferred to Vault
   function processMoreThanValue4() internal returns (bool) {
+    require(!guardianStatus, "emergency is start");
     (uint256 _totalBalance, uint256 _percent, ) = price.getLPTTFFPrice(0);
     uint256 _newPercent = _percent.sub(protocolVaultPercentage);
     uint256 _amount = _totalBalance.mul(_newPercent).div(10**20);
@@ -256,4 +282,19 @@ contract ProtocolGradual is KeeperCompatibleInterface {
     emit TransferToETHPool(protocolVaultAddress, ethPoolAddress, _amount); 
     return true;
   }
+
+  function guardian() internal {
+    require(guardianStatus, "emergency is not start");
+    uniV2Adapter.removeLiquidity(100);
+    trade.redeemTTFF();
+    uint256 _amount = weth.balanceOf(ethPoolAddress);
+    bool _success = ethPool.feedVault(_amount);
+    require(_success, "Transfer to Protocol Vault failed");
+    emit TransferToVault(ethPoolAddress, protocolVaultAddress, _amount);
+    protocolVault.toExchange();
+    protocolVault.setTokenAddress();
+    lpttff.setGuardianStatus(true); 
+  } 
+
+
 }

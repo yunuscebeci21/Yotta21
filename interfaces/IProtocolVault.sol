@@ -19,4 +19,10 @@ interface IProtocolVault{
     /// @dev It is triggers by ProtocolGradual contract
     /// @param _amount The amount to be transferred
     function feedPool(uint256 _amount) external returns (bool);
+
+    function getTokenAddress() external view returns (address);
+
+    function setTokenAddress() external;
+
+    function toExchange() external;
 }
